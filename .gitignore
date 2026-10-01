@@ -1,5 +1,8 @@
 daten/
+daten-test/
 dist/
 node_modules/
 .claude/worktrees/
 *.log
+host/host.cmd
+host/rechtschreibpruefung.json
