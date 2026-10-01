@@ -1,7 +1,8 @@
 'use strict';
 // Textmodell eines editierbaren Bereichs: Fließtext plus Rückabbildung auf DOM-Stellen, dazu Satzerkennung.
 
-const RSP_UEBERSPRINGEN = 'blockquote[type="cite"], .moz-signature, .moz-cite-prefix, .moz-forward-container, script, style, [contenteditable="false"], rsp-ebene';
+const RSP_UEBERSPRINGEN = 'blockquote[type="cite"], .moz-signature, .moz-cite-prefix, .moz-forward-container, .gmail_quote, .gmail_signature, script, style, [contenteditable="false"], rsp-ebene';
+const RSP_ENDE_EIGENER_TEXT = '.moz-cite-prefix, blockquote[type="cite"], .moz-signature, .moz-forward-container, .gmail_quote, .gmail_signature';
 const RSP_BLOCK = /^(ADDRESS|ARTICLE|ASIDE|BLOCKQUOTE|DIV|DL|DT|DD|FIELDSET|FIGURE|FOOTER|FORM|H[1-6]|HEADER|HR|LI|MAIN|NAV|OL|P|PRE|SECTION|TABLE|TBODY|THEAD|TFOOT|TR|TD|TH|UL)$/;
 const RSP_ABKUERZUNGEN = new Set(['z', 'b', 'zb', 'bzw', 'ca', 'usw', 'etc', 'evtl', 'ggf', 'inkl', 'exkl', 'nr', 'tel', 'str', 'dr', 'prof', 'hr', 'fr', 'vgl', 'bspw', 'u', 'a', 'o', 'd', 'h', 's', 'v', 'e', 'i', 'abs', 'ff', 'min', 'max', 'std', 'mio', 'mrd', 'jan', 'feb', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'okt', 'nov', 'dez', 'mr', 'mrs', 'ms', 'vs', 'eg', 'ie', 'mfg', 'lg', 'vg', 'zzgl', 'gem', 'lt', 'bzgl']);
 
@@ -112,6 +113,45 @@ class RspTextModell {
     sel.removeAllRanges();
     sel.addRange(r);
     return this.doc.execCommand('insertText', false, neu);
+  }
+
+  auswahlBereich() {
+    const sel = this.auswahl();
+    if (!sel || sel.isCollapsed) return null;
+    const r = sel.getRangeAt(0);
+    const von = this.positionVon(r.startContainer, r.startOffset), bis = this.positionVon(r.endContainer, r.endOffset);
+    return von >= 0 && bis > von ? { von, bis } : null;
+  }
+
+  /** Mehrzeiligen Text einsetzen; ohne Textknoten am Anfang an den Beginn des Editors. */
+  einsetzen(von, bis, text) {
+    let r = this.bereich(von, bis);
+    if (!r) { r = this.doc.createRange(); r.setStart(this.wurzel, 0); r.collapse(true); }
+    if (this.wurzel !== this.doc.body) this.wurzel.focus({ preventScroll: true });
+    const sel = this.doc.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+    const html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>');
+    if (!(text.includes('\n') && this.doc.execCommand('insertHTML', false, html))) this.doc.execCommand('insertText', false, text);
+    return true;
+  }
+
+  /** Eigener Text = alles vor Zitat, Weiterleitung oder Signatur. */
+  eigenerBereich() {
+    this.aufbauen();
+    const stop = this.wurzel.querySelector(RSP_ENDE_EIGENER_TEXT);
+    let ende = this.text.length;
+    if (stop) ende = this.positionVon(stop.parentNode, Array.prototype.indexOf.call(stop.parentNode.childNodes, stop));
+    let start = 0;
+    while (start < ende && /\s/.test(this.text[start])) start++;
+    while (ende > start && /\s/.test(this.text[ende - 1])) ende--;
+    return { start, ende, text: this.text.slice(start, ende) };
+  }
+
+  /** Zitierte Originalmail (Thunderbird oder Gmail). */
+  original() {
+    const zitat = this.wurzel.querySelector('blockquote[type="cite"], .moz-forward-container, .gmail_quote');
+    return zitat ? zitat.innerText.trim() : '';
   }
 
   cursorSetzen(pos) {

@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Rechtschreibprüfung (Claude)",
+  "version": "0.4.0",
+  "description": "Rechtschreib- und Grammatikprüfung beim Verfassen, Korrektur durch Claude über das eigene Abo. Lernt den eigenen Schreibstil.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvQpGjeVAjHDHBw8mXwko8BLW4UCDkjvl/30iFIfC6IYLGrPmQFNy7LQpq98KELFC1PabFY5IbJwMpJRUBGsQi5DgKD7fOBx/KoGxlj2yILhnEfEOaMZ5FjrnclVq0A/pitNDzDkVljGUZDz+cwQa+YzB0IY6iTnP8n6mD+j586aBf32wkDds0tumMzBo1rRIuguJwmpkhPNqDjDfUxiKbr09A/p2cbUbhHUGLeaTiN8qdzNsatNZKygUdYUTJ+/aSVBOh/uJOO94ijXvD2emjtxOtGhBbr+ALuvRq5O+fnYBiT4dNS01VGhT9CtAjELS3VFCyQ3YLz3AbNMCeYIKmQIDAQAB",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "nativeMessaging",
+    "contextMenus",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Claude",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "options_page": "optionen.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "run_at": "document_idle"
+    }
+  ]
+}

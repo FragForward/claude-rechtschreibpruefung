@@ -39,7 +39,8 @@ function anHost(n) {
 
 const DATEIEN = {
   '/': ['test/pruefstand.html', 'text/html'],
-  '/content.js': ['dist/thunderbird/content.js', 'text/javascript'],
+  '/chrome': ['test/pruefstand-chrome.html', 'text/html'],
+  '/content.js': ['dist/chrome/content.js', 'text/javascript'],
 };
 
 http.createServer((req, res) => {

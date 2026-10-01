@@ -10,8 +10,9 @@
 <script>
   // Ersatz für die Thunderbird-API: Nachrichten gehen per HTTP an den Prüfstand-Server.
   // Befehle an das Mailfenster lassen sich mit rspBefehl({ art: ... }) auslösen.
+  window.rspTestPlattform = 'thunderbird';
   const rspHoerer = [];
-  window.rspBefehl = n => rspHoerer[0](n);
+  window.rspBefehl = n => new Promise(fertig => { if (!rspHoerer[0](n, {}, fertig)) fertig(undefined); });
   window.browser = { runtime: {
     sendMessage: n => fetch('/nachricht', { method: 'POST', body: JSON.stringify(n) }).then(r => r.json()),
     onMessage: { addListener: f => rspHoerer.push(f) },

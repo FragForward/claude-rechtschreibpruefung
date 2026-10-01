@@ -6,3 +6,4 @@ node_modules/
 *.log
 host/host.cmd
 host/rechtschreibpruefung.json
+host/rechtschreibpruefung.chrome.json

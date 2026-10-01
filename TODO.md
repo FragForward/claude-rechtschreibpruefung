@@ -2,11 +2,11 @@
 
 Nach dem ersten Test des Prototyps (01.10.2026) priorisieren.
 
-## Chrome
-- [ ] Chrome-Version (MV3): eigenes Manifest mit festem `key`, Native-Messaging-Eintrag unter `HKCU\Software\Google\Chrome\NativeMessagingHosts`.
-- [ ] Editor-Erkennung per `focusin` (contenteditable-Bereiche, z. B. Gmail), Felder mit `spellcheck="false"` auslassen.
-- [ ] Normale Textfelder (`<textarea>`): Spiegel-Element für die Positionsberechnung, wie LanguageTool (`lt-mirror`).
-- [ ] Background als Service Worker: Verbindung zum Host nach dem Aufwachen neu aufbauen.
+## Chrome und Firefox
+- [x] Chrome-Version (MV3, fester Schlüssel) und Firefox-Version (MV2) aus demselben Code.
+- [x] Textfelder über Spiegel-Element, Editoren per focusin, Gmail-Zitat und -Signatur ausgenommen.
+- [ ] Firefox-Version bei addons.mozilla.org als "nicht gelistet" signieren (braucht Mozilla-Konto des Users).
+- [ ] Mehrere Rahmen (iframes) mit Editor auf einer Seite: Knopf-Befehle gehen an den zuletzt benutzten.
 
 ## Prüfung
 - [x] Ein-/Ausschalten je Mail über den Knopf "Claude" in der Verfassen-Leiste.

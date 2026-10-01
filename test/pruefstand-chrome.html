@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Prüfstand Chrome</title>
+<style>
+  body { font: 15px/1.5 "Segoe UI", sans-serif; margin: 16px; max-width: 760px; }
+  textarea { width: 100%; height: 120px; font: 15px/1.5 "Segoe UI", sans-serif; padding: 8px; box-sizing: border-box; }
+  .editor { border: 1px solid #ccc; padding: 8px; min-height: 80px; margin-top: 16px; }
+  input { width: 100%; }
+</style>
+<script>
+  // Wie pruefstand.html, aber Webseite statt Verfassen-Fenster: Prüfung startet erst beim Klick in ein Feld.
+  window.rspTestPlattform = 'chrome';
+  const rspHoerer = [];
+  window.rspBefehl = n => new Promise(fertig => { if (!rspHoerer[0](n, {}, fertig)) fertig(undefined); });
+  window.browser = { runtime: {
+    sendMessage: n => fetch('/nachricht', { method: 'POST', body: JSON.stringify(n) }).then(r => r.json()),
+    onMessage: { addListener: f => rspHoerer.push(f) },
+  } };
+</script>
+</head>
+<body>
+  <input id="suche" placeholder="Suchfeld, wird nicht geprüft">
+  <textarea id="feld">Hallo georg
+ich wollte dir sagen das wir das angebot  bis freitag fertig haben
+lg alex</textarea>
+  <div class="editor" contenteditable="true"><div>Hallo Max, der server isthonline und lauft seit gestern.</div><div class="gmail_quote">Zitat wird nicht geprüft</div></div>
+  <script src="/content.js"></script>
+</body>
+</html>

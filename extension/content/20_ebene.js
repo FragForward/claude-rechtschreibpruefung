@@ -33,6 +33,8 @@ const RSP_CSS = `
 .knoepfe button:hover { background: #e2e6ea; }
 .knoepfe button.primaer { background: #2f81f7; color: #fff; font-weight: 600; }
 .knoepfe button.primaer:hover { background: #1f6feb; }
+.spiegel { position: fixed; visibility: hidden; overflow: hidden; white-space: pre-wrap; overflow-wrap: break-word;
+  box-sizing: border-box; border-style: solid; border-color: transparent; margin: 0; pointer-events: none; }
 .hinweis { position: fixed; right: 12px; bottom: 12px; max-width: 360px; background: #1f2328; color: #fff; padding: 8px 12px; border-radius: 8px;
   font: 12px/1.4 system-ui, "Segoe UI", sans-serif; box-shadow: 0 4px 16px rgba(0,0,0,.25); pointer-events: none; transition: opacity .3s; }
 `;
@@ -44,10 +46,10 @@ class RspEbene {
     this.host.setAttribute('contenteditable', 'false');
     this.host.style.cssText = 'all: initial; position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 2147483647;';
     this.schatten = this.host.attachShadow({ mode: 'open' });
-    this.schatten.innerHTML = `<style>${RSP_CSS}</style><div class="marken"></div><div class="oben"></div>`;
+    this.schatten.innerHTML = `<style>${RSP_CSS}</style><div class="marken"></div><div class="spiegelablage"></div><div class="oben"></div>`;
     this.marken = this.schatten.querySelector('.marken');
     this.oben = this.schatten.querySelector('.oben');
-    this.ziele = [];
+    this.schichten = new Map(); // je Editor eine Schicht mit eigenen Zielen
     // Ebenen einer früheren Add-on-Fassung ausblenden; entfernt würden sie sich wieder einhängen.
     for (const alt of doc.querySelectorAll('rsp-ebene')) alt.style.display = 'none';
     this.einhaengen();
@@ -59,10 +61,11 @@ class RspEbene {
   }
 
   /** eintraege: {art:'wort', typ, rechtecke, daten} | {art:'knopf', typ, rechteck, daten} */
-  zeichnen(eintraege, sichtbar) {
+  zeichnen(eintraege, sichtbar, besitzer) {
     this.einhaengen();
+    const schicht = this.schicht(besitzer);
     const frag = this.doc.createDocumentFragment();
-    this.ziele = [];
+    const ziele = schicht.ziele = [];
     for (const e of eintraege) {
       if (e.art === 'knopf') {
         // Zähler hochgestellt hinter dem Satzende, damit er den folgenden Text kaum verdeckt.
@@ -74,14 +77,31 @@ class RspEbene {
         const k = this.kasten('knopf ' + e.typ, x, y, b, h);
         k.textContent = t;
         frag.appendChild(k);
-        this.ziele.push({ knopf: true, rechtecke: [{ left: x - 3, top: y - 3, right: x + b + 3, bottom: y + h + 3 }], daten: e.daten });
+        ziele.push({ knopf: true, rechtecke: [{ left: x - 3, top: y - 3, right: x + b + 3, bottom: y + h + 3 }], daten: e.daten });
       } else {
         const rs = e.rechtecke.map(r => rspSchneiden(r, sichtbar)).filter(Boolean);
         for (const r of rs) frag.appendChild(this.kasten('wort ' + e.typ, r.left, r.top, r.right - r.left, r.bottom - r.top));
-        if (e.daten && rs.length) this.ziele.push({ knopf: false, rechtecke: rs, daten: e.daten });
+        if (e.daten && rs.length) ziele.push({ knopf: false, rechtecke: rs, daten: e.daten });
       }
     }
-    this.marken.replaceChildren(frag);
+    schicht.div.replaceChildren(frag);
+  }
+
+  schicht(besitzer) {
+    let s = this.schichten.get(besitzer);
+    if (!s) {
+      s = { div: this.doc.createElement('div'), ziele: [] };
+      this.marken.appendChild(s.div);
+      this.schichten.set(besitzer, s);
+    }
+    return s;
+  }
+
+  spiegelErzeugen() {
+    const d = this.doc.createElement('div');
+    d.className = 'spiegel';
+    this.schatten.querySelector('.spiegelablage').appendChild(d);
+    return d;
   }
 
   kasten(klasse, x, y, b, h) {
@@ -92,9 +112,10 @@ class RspEbene {
   }
 
   /** Ziel unter dem Mauszeiger; Satzknöpfe haben Vorrang vor Wörtern. */
-  treffer(x, y) {
+  treffer(x, y, besitzer) {
+    const ziele = this.schicht(besitzer).ziele;
     const drin = z => z.rechtecke.some(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
-    return this.ziele.find(z => z.knopf && drin(z)) || this.ziele.find(z => !z.knopf && drin(z)) || null;
+    return ziele.find(z => z.knopf && drin(z)) || ziele.find(z => !z.knopf && drin(z)) || null;
   }
 
   hinweis(text, dauer = 4000) {

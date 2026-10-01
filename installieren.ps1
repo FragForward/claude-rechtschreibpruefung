@@ -28,17 +28,35 @@ $json = [ordered]@{
 } | ConvertTo-Json
 [IO.File]::WriteAllText($manifest, $json, $utf8)
 
-foreach ($basis in 'HKCU:\Software\Mozilla\NativeMessagingHosts', 'HKCU:\Software\Thunderbird\NativeMessagingHosts') {
+# Chrome kennt die Erweiterung ueber ihre feste ID (aus dem Schluessel im Chrome-Manifest).
+$chromeId = (Get-Content (Join-Path $root 'extension\chrome-schluessel.json') -Raw | ConvertFrom-Json).id
+$manifestChrome = Join-Path $hostOrdner 'rechtschreibpruefung.chrome.json'
+$json = [ordered]@{
+  name            = 'rechtschreibpruefung'
+  description     = 'Rechtschreibpruefung mit Claude'
+  path            = $cmd
+  type            = 'stdio'
+  allowed_origins = @("chrome-extension://$chromeId/")
+} | ConvertTo-Json
+[IO.File]::WriteAllText($manifestChrome, $json, $utf8)
+
+$eintraege = @{
+  'HKCU:\Software\Mozilla\NativeMessagingHosts'      = $manifest
+  'HKCU:\Software\Thunderbird\NativeMessagingHosts'  = $manifest
+  'HKCU:\Software\Google\Chrome\NativeMessagingHosts' = $manifestChrome
+}
+foreach ($basis in $eintraege.Keys) {
   $schluessel = Join-Path $basis 'rechtschreibpruefung'
   New-Item -Path $schluessel -Force | Out-Null
-  Set-ItemProperty -Path $schluessel -Name '(default)' -Value $manifest
+  Set-ItemProperty -Path $schluessel -Name '(default)' -Value $eintraege[$basis]
 }
 
 & (Join-Path $root 'bauen.ps1')
 
 Write-Host ''
-Write-Host "Hilfsprogramm angemeldet: $manifest"
-Write-Host "Gelerntes liegt in:       $daten"
+Write-Host "Hilfsprogramm angemeldet (Thunderbird und Chrome), Daten in $daten"
 Write-Host ''
-Write-Host 'Jetzt in Thunderbird: Add-ons und Themes > Zahnrad > Add-on aus Datei installieren >'
+Write-Host 'Thunderbird: Add-ons und Themes > Zahnrad > Add-on aus Datei installieren >'
 Write-Host "  $((Get-ChildItem (Join-Path $root 'dist\rechtschreibpruefung-*.xpi') | Sort-Object LastWriteTime | Select-Object -Last 1).FullName)"
+Write-Host 'Chrome: chrome://extensions > Entwicklermodus > Entpackte Erweiterung laden >'
+Write-Host "  $(Join-Path $root 'dist\chrome')"

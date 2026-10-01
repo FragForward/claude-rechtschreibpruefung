@@ -1,18 +1,29 @@
 # Rechtschreibprüfung (Claude)
 
-Rechtschreib- und Grammatikprüfung für Thunderbird. Erkennt fertige Sätze beim Schreiben, lässt sie von Claude prüfen (über das eigene Claude-Abo, kein API-Schlüssel) und zeigt Vorschläge wie LanguageTool an. Lernt dabei den eigenen Schreibstil.
+Rechtschreib- und Grammatikprüfung für **Thunderbird, Chrome und Firefox**. Erkennt fertige Sätze beim Schreiben, lässt sie von Claude prüfen (über das eigene Claude-Abo, kein API-Schlüssel) und zeigt Vorschläge wie LanguageTool an. Lernt dabei den eigenen Schreibstil.
 
 ## Aufbau
 
 ```
-Thunderbird-Add-on (extension/)
-   | erkennt fertige Sätze, zeichnet Markierungen, Popup, Autokorrektur
+Erweiterung (extension/, ein Code für alle drei)
+   | Thunderbird: Verfassen-Fenster    Chrome/Firefox: jedes Textfeld und jeder Editor
+   | erkennt fertige Sätze, zeichnet Markierungen, Zähler, Popup, Autokorrektur, Assistent
    | Native Messaging
-Hilfsprogramm (host/, Node)
-   | hält EINE Claude-Code-Sitzung dauerhaft offen (Haiku, ohne Nachdenken, ohne Werkzeuge)
+Hilfsprogramm (host/, Node) - je Browser ein Prozess, gemeinsame Daten
+   | Prüfsitzung (Sonnet) und Assistentensitzung (Sonnet), dauerhaft offen, ohne Nachdenken, ohne Werkzeuge
    v
 claude.exe  ->  dein Abo-Login
 ```
+
+| Ordner | Inhalt |
+|---|---|
+| `extension/content/NN_*.js` | Inhaltsskript in Teilen, Nummer = Ladereihenfolge |
+| `extension/hintergrund/` | `10_gemeinsam.js` + `20_thunderbird.js` bzw. `20_web.js` (Chrome und Firefox) |
+| `extension/plattform.js` | einheitliches `browser`-Objekt, `RSP_WEB` (Webbrowser oder Thunderbird) |
+| `extension/manifest*.json` | Thunderbird, Chrome (MV3, fester Schlüssel), Firefox (MV2) |
+| `host/` | Hilfsprogramm |
+
+`bauen.ps1` fügt die Teile zusammen und schreibt `dist/thunderbird`, `dist/chrome`, `dist/firefox`, dazu `dist/*.xpi` (Thunderbird) und `dist/*-firefox-*.zip` (zum Signieren).
 
 Gelerntes liegt in `daten/` im Haupt-Checkout (nicht im Repo):
 
@@ -29,14 +40,14 @@ Gelerntes liegt in `daten/` im Haupt-Checkout (nicht im Repo):
 
 ## Bedienung
 
-- **Rot** = Rechtschreibung, **gelb** = Grammatik, **blau** = Stil. Klick auf das Wort öffnet den Vorschlag.
-- **Blauer Punkt am Satzende** = Vorschlag für den ganzen Satz.
-- **Autokorrektur**: Wird derselbe eindeutige Tippfehler 3-mal übernommen, korrigiert das Add-on ihn künftig beim Tippen sofort. Backspace direkt danach nimmt es zurück. "Immer automatisch" im Popup macht das sofort.
-- **Lernen**: Nach 10 Minuten ohne Schreiben wertet die Sitzung das Journal aus, aktualisiert `schreibprofil.md` und startet mit dem neuen Profil frisch.
-- **Knopf "Claude" in der Symbolleiste** des Verfassen-Fensters: Prüfung für diese Mail ein/aus, Antwort schreiben (optional mit Stichworten), Antwort verbessern, Antwort prüfen. Ergebnisse erscheinen in einem eigenen Fenster und kommen erst mit "Übernehmen" in die Mail.
+- **Rot** = Rechtschreibung, **gelb** = Grammatik/Leerzeichen, **blau** = Stil. Klick auf das Wort öffnet den Vorschlag.
+- **Zähler hinter jedem Satz**: Klick zeigt alle Vorschläge des Satzes mit Haken, "Ausgewählte übernehmen".
+- **Zeilen**: Solange in einer Zeile geschrieben wird, nur Tippfehler; Satzende-Prüfung erst nach Verlassen der Zeile.
+- **Autokorrektur**: Wird derselbe eindeutige Tippfehler 3-mal übernommen, wird er künftig beim Tippen sofort ersetzt. Backspace direkt danach nimmt es zurück.
+- **Knopf "Claude"** (Thunderbird: Verfassen-Leiste, Chrome/Firefox: Symbolleiste): Status (… prüft, Zahl offen, Haken fertig, AUS), Prüfung ein/aus, Text schreiben, verbessern, prüfen.
 - **Rechtsklick auf markierten Text**: "Mit Claude verbessern".
-- Der Assistent läuft in einer zweiten Sitzung mit Sonnet und startet nach jeder Aufgabe frisch.
-- Einstellungen, Listen und Profil: Add-ons > Rechtschreibprüfung > Einstellungen.
+- **Lernen**: Nach 10 Minuten ohne Schreiben wertet die Sitzung das Journal aus und aktualisiert `schreibprofil.md` (bei zwei Browsern nur einer, Sperrdatei).
+- **Selbstaktualisierung**: Nach `bauen.ps1` lädt sich die Erweiterung innerhalb von 30 s neu (Thunderbird: nur ohne offene Mail, Chrome/Firefox: nach 2 Minuten ohne Schreiben).
 
 ## Installation
 
@@ -46,11 +57,14 @@ Voraussetzungen: Node.js, Claude Code mit Abo-Login (`claude` einmal starten, `/
 powershell -ExecutionPolicy Bypass -File installieren.ps1
 ```
 
-Das Skript meldet das Hilfsprogramm bei Thunderbird an (Registry unter HKCU) und baut `dist/rechtschreibpruefung-<version>.xpi`. Danach in Thunderbird: Add-ons und Themes > Zahnrad > Add-on aus Datei installieren.
+Meldet das Hilfsprogramm bei Thunderbird, Firefox und Chrome an (Registry unter HKCU) und baut alles. Dann:
 
-Empfohlen: In Thunderbird die eingebaute Rechtschreibprüfung beim Schreiben ausschalten und LanguageTool deaktivieren, sonst gibt es doppelte Unterstreichungen.
+- **Thunderbird**: Proxy-Datei `rechtschreibpruefung@lokal` im Ordner `extensions` des Profils mit dem Pfad zu `dist\thunderbird\` (oder einmalig die `.xpi` installieren).
+- **Chrome**: `chrome://extensions` > Entwicklermodus > "Entpackte Erweiterung laden" > `dist\chrome`.
+- **Firefox**: Normales Firefox installiert nur von Mozilla signierte Erweiterungen dauerhaft. Zum Ausprobieren `about:debugging` > Dieser Firefox > "Temporäres Add-on laden" > `dist\firefox\manifest.json` (bis zum Neustart). Dauerhaft: `dist\rechtschreibpruefung-firefox-<version>.zip` bei addons.mozilla.org als "nicht gelistet" signieren lassen.
+
+Empfohlen: eingebaute Rechtschreibprüfung und LanguageTool ausschalten, sonst doppelte Unterstreichungen.
 
 ## Entwicklung
 
-- Inhaltsskripte liegen einzeln in `extension/content/NN_thema.js` (Nummer = Ladereihenfolge); `bauen.ps1` fügt sie zu `content.js` zusammen.
-- Prüfstand ohne Thunderbird: `node test/pruefstand-server.js`, dann http://localhost:8765 öffnen. Verwendet den echten Host mit Daten in `daten-test/`.
+- Prüfstand ohne Browser-Erweiterung: `node test/pruefstand-server.js`, dann http://localhost:8765 (Thunderbird-Verfassen-Fenster) oder http://localhost:8765/chrome (Webseite mit Textfeld und Editor). Verwendet den echten Host mit Daten in `daten-test/`.

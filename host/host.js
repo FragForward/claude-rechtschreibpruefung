@@ -129,6 +129,10 @@ async function auswerten() {
   if (auswertungLaeuft) return { laeuft: true };
   const eintraege = lernen.journalLesen();
   if (!eintraege.length) return { nichts: true };
+  // Thunderbird und Chrome haben je einen Host; nur einer wertet aus.
+  const sperre = path.join(DATEN, 'auswertung.sperre');
+  try { if (Date.now() - fs.statSync(sperre).mtimeMs < 600000) return { laeuft: true }; } catch (e) { /* keine Sperre */ }
+  fs.writeFileSync(sperre, String(process.pid));
   auswertungLaeuft = true;
   try {
     log('Auswertung startet mit', eintraege.length, 'Einträgen');
@@ -143,6 +147,7 @@ async function auswerten() {
     return { profil: lernen.profil() };
   } finally {
     auswertungLaeuft = false;
+    try { fs.unlinkSync(sperre); } catch (e) { /* schon weg */ }
   }
 }
 

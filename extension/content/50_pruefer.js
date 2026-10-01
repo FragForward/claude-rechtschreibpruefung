@@ -18,7 +18,7 @@ class RspPruefer {
     this.element = element;
     this.doc = element.ownerDocument;
     this.ebene = rspEbeneFuer(this.doc);
-    this.modell = new RspTextModell(element);
+    this.modell = element.tagName === 'TEXTAREA' ? new RspTextfeldModell(element, this.ebene) : new RspTextModell(element);
     this.popup = new RspPopup(this.ebene);
     this.auto = new RspAutokorrektur(this);
     this.cache = new Map();      // Satztext -> { zustand, fehler, satzVorschlag, satzErklaerung }
@@ -48,6 +48,10 @@ class RspPruefer {
       this.planen(RSP_RUHE_MS);
     });
     doc.addEventListener('selectionchange', () => this.planen(RSP_RUHE_MS));
+    // Textfelder melden Cursorbewegungen nicht über selectionchange
+    el.addEventListener('keyup', () => this.planen(RSP_RUHE_MS));
+    el.addEventListener('mouseup', () => this.planen(RSP_RUHE_MS));
+    el.addEventListener('focusout', () => { this.alleFertig = true; this.planen(100); });
     doc.addEventListener('mousedown', ev => this.maus(ev), true);
     win.addEventListener('scroll', () => this.zeichnenBald(), true);
     win.addEventListener('resize', () => this.zeichnenBald());
@@ -102,6 +106,12 @@ class RspPruefer {
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
     const kontext = rspKontext(text, s);
     rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt, schreibt }).then(a => {
+      if (!a.ok && /invalidated|ungültig/i.test(a.fehler || '')) {
+        // Erweiterung wurde neu geladen; dieses Skript ist verwaist, das neue übernimmt.
+        this.aktiv = false;
+        this.zeichnen();
+        return;
+      }
       if (!a.ok) {
         eintrag.zustand = 'fehler';
         if (Date.now() - this.letzterFehler > 60000) {
@@ -121,8 +131,8 @@ class RspPruefer {
   }
 
   zeichnen() {
-    if (!this.element.isConnected) return;
-    if (!this.aktiv) { this.ebene.zeichnen([], this.modell.sichtbar()); return; }
+    if (!this.element.isConnected) { this.ebene.zeichnen([], { left: 0, top: 0, right: 0, bottom: 0 }, this); return; }
+    if (!this.aktiv) { this.ebene.zeichnen([], this.modell.sichtbar(), this); return; }
     this.modell.aufbauen();
     this.saetze = rspSaetze(this.modell.text);
     const eintraege = [];
@@ -155,7 +165,7 @@ class RspPruefer {
     const jetzt = Date.now();
     this.blitze = this.blitze.filter(b => b.bis > jetzt);
     for (const b of this.blitze) eintraege.push({ art: 'wort', typ: 'blitz', rechtecke: this.modell.rechtecke(b.von, b.bisPos) });
-    this.ebene.zeichnen(eintraege, this.modell.sichtbar());
+    this.ebene.zeichnen(eintraege, this.modell.sichtbar(), this);
   }
 
   /** Prüfung und Autokorrektur für diese Mail ein- oder ausschalten. */
@@ -178,7 +188,7 @@ class RspPruefer {
     if (this.popup.enthaelt(ev)) return;
     this.popup.schliessen();
     if (ev.button !== 0) return;
-    const z = this.ebene.treffer(ev.clientX, ev.clientY);
+    const z = this.ebene.treffer(ev.clientX, ev.clientY, this);
     if (!z) return;
     if (z.knopf) ev.preventDefault();
     const anker = z.rechtecke[z.rechtecke.length - 1];
