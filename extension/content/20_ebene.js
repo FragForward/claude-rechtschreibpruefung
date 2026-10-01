@@ -46,9 +46,12 @@ class RspEbene {
     this.host.setAttribute('contenteditable', 'false');
     this.host.style.cssText = 'all: initial; position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 2147483647;';
     this.schatten = this.host.attachShadow({ mode: 'open' });
-    this.schatten.innerHTML = `<style>${RSP_CSS}</style><div class="marken"></div><div class="spiegelablage"></div><div class="oben"></div>`;
-    this.marken = this.schatten.querySelector('.marken');
-    this.oben = this.schatten.querySelector('.oben');
+    const stil = doc.createElement('style');
+    stil.textContent = RSP_CSS;
+    const bereich = name => { const d = doc.createElement('div'); d.className = name; return d; };
+    this.marken = bereich('marken');
+    this.oben = bereich('oben');
+    this.schatten.append(stil, this.marken, bereich('spiegelablage'), this.oben);
     this.schichten = new Map(); // je Editor eine Schicht mit eigenen Zielen
     // Ebenen einer früheren Add-on-Fassung ausblenden; entfernt würden sie sich wieder einhängen.
     for (const alt of doc.querySelectorAll('rsp-ebene')) alt.style.display = 'none';

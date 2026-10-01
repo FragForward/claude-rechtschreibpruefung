@@ -4,6 +4,9 @@
 let rspLetzteAktivitaet = 0;
 function rspAktivitaet() { rspLetzteAktivitaet = Date.now(); }
 
+/** Webseiten haben keinen Betreff; der Assistent kommt ohne aus. */
+async function rspBetreff() { return ''; }
+
 // Nur neu laden, wenn zwei Minuten lang nirgends geschrieben wurde.
 async function rspDarfNeuLaden() {
   return Date.now() - rspLetzteAktivitaet > 120000;

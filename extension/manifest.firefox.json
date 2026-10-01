@@ -1,12 +1,18 @@
 {
   "manifest_version": 2,
   "name": "Rechtschreibprüfung (Claude)",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Rechtschreib- und Grammatikprüfung beim Verfassen, Korrektur durch Claude über das eigene Abo. Lernt den eigenen Schreibstil.",
   "browser_specific_settings": {
     "gecko": {
       "id": "rechtschreibpruefung@lokal",
-      "strict_min_version": "128.0"
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent",
+          "personalCommunications"
+        ]
+      }
     }
   },
   "icons": {

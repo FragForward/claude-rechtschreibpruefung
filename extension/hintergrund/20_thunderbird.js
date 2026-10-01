@@ -15,6 +15,10 @@ async function rspDarfNeuLaden() {
 
 function rspAktivitaet() {}
 
+async function rspBetreff(tabId) {
+  return (await browser.compose.getComposeDetails(tabId)).subject || '';
+}
+
 // Nach einem Neuladen laufen offene Mailfenster ohne Prüfung weiter; dort das Skript neu einsetzen.
 rspVerfassenTabs().then(tabs => {
   for (const t of tabs) browser.tabs.executeScript(t.id, { file: 'content.js' }).catch(e => console.warn('Rechtschreibprüfung: Einsetzen fehlgeschlagen', e));

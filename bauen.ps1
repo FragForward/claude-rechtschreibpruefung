@@ -22,9 +22,14 @@ foreach ($plattform in $ziele.Keys) {
   $ziel = Join-Path $root "dist\$plattform"
   # Ordner nicht loeschen: die Browser laden die Erweiterung direkt von hier.
   New-Item -ItemType Directory -Force $ziel | Out-Null
-  foreach ($teil in 'plattform.js', 'popup.html', 'popup.js', 'assistent.html', 'assistent.js', 'optionen.html', 'optionen.js', 'icon.svg', 'icons', 'content', 'hintergrund') {
+  foreach ($teil in 'plattform.js', 'popup.html', 'popup.js', 'assistent.html', 'assistent.js', 'optionen.html', 'optionen.js', 'icon.svg', 'icons', 'content') {
     Copy-Item (Join-Path $quelle $teil) $ziel -Recurse -Force
   }
+  # Vom Hintergrund nur die Teile dieses Ziels mitliefern (Mozilla bemaengelt fremde APIs).
+  $hgZiel = Join-Path $ziel 'hintergrund'
+  if (Test-Path $hgZiel) { Remove-Item -Recurse -Force $hgZiel }
+  New-Item -ItemType Directory -Force $hgZiel | Out-Null
+  foreach ($teil in '10_gemeinsam.js', $ziele[$plattform][1]) { Copy-Item (Join-Path $quelle "hintergrund\$teil") $hgZiel -Force }
   Copy-Item (Join-Path $quelle $ziele[$plattform][0]) (Join-Path $ziel 'manifest.json') -Force
 
   $inhalt = @(Join-Path $quelle 'plattform.js') + @(Get-ChildItem (Join-Path $quelle 'content') -Filter '*.js' | Sort-Object Name | ForEach-Object FullName)

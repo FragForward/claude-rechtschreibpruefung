@@ -1,6 +1,6 @@
 'use strict';
 // Hintergrund, gemeinsamer Teil: Verbindung zum Hilfsprogramm, Statusanzeige, Assistent, Selbstaktualisierung.
-// Die Plattformteile (20_thunderbird.js / 20_web.js) liefern rspDarfNeuLaden() und rspAktivitaet().
+// Die Plattformteile (20_thunderbird.js / 20_web.js) liefern rspDarfNeuLaden(), rspAktivitaet() und rspBetreff().
 
 const RSP_HOST = 'rechtschreibpruefung';
 let rspPort = null;
@@ -70,8 +70,7 @@ rspHoeren((n, sender) => {
     case 'an_tab':
       return browser.tabs.sendMessage(n.tabId, n.nachricht).then(a => a || { ok: false, fehler: 'Kein Editor gefunden' }, e => ({ ok: false, fehler: 'Kein Editor gefunden (' + e.message + ')' }));
     case 'betreff':
-      if (!browser.compose) return { ok: true, betreff: '' };
-      return browser.compose.getComposeDetails(n.tabId).then(d => ({ ok: true, betreff: d.subject || '' }), () => ({ ok: true, betreff: '' }));
+      return rspBetreff(n.tabId).then(betreff => ({ ok: true, betreff }), () => ({ ok: true, betreff: '' }));
     default:
       if (n.art === 'pruefen') rspAktivitaet();
       return rspAnHost(n);
