@@ -44,8 +44,24 @@ async function rspAssistentOeffnen(tabId, aufgabe) {
   return { ok: true };
 }
 
-browser.runtime.onMessage.addListener(n => {
+const RSP_STATUS = {
+  pruefen: ['…', '#2f81f7'],
+  aus: ['AUS', '#8c959f'],
+  0: ['✓', '#1a7f37'],
+};
+
+/** Zustand der Prüfung am Claude-Knopf: … prüft, Zahl = offene Befunde, Haken = fertig ohne Befund. */
+function rspStatusZeigen(tabId, stand) {
+  const [text, farbe] = RSP_STATUS[stand] || [stand, '#e5484d'];
+  browser.composeAction.setBadgeText({ tabId, text });
+  browser.composeAction.setBadgeBackgroundColor({ tabId, color: farbe });
+  return Promise.resolve({ ok: true });
+}
+
+browser.runtime.onMessage.addListener((n, sender) => {
   switch (n.art) {
+    case 'status_tab':
+      return sender.tab ? rspStatusZeigen(sender.tab.id, n.stand) : Promise.resolve({ ok: false });
     case 'assistent_oeffnen':
       return rspAssistentOeffnen(n.tabId, n.aufgabe);
     case 'an_tab':

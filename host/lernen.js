@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { log } = require('./log');
 
-const STANDARD = { modell: 'haiku', modellAssistent: 'sonnet', autoSchwelle: 3, pauseMinuten: 10, maxAnfragenProSitzung: 150, maxStundenProSitzung: 8 };
+const STANDARD = { modell: 'sonnet', modellAssistent: 'sonnet', autoSchwelle: 3, pauseMinuten: 10, maxAnfragenProSitzung: 150, maxStundenProSitzung: 8 };
 const TYPEN = new Set(['rechtschreibung', 'grammatik', 'stil']);
 
 class Lernen {

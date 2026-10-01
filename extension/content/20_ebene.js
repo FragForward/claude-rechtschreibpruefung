@@ -9,8 +9,8 @@ const RSP_CSS = `
 .wort.grammatik { border-color: #f0a020; background: rgba(240, 160, 32, .14); }
 .wort.stil { border-color: #3e8ef7; background: rgba(62, 142, 247, .10); }
 .wort.blitz { border: none; background: rgba(46, 160, 67, .30); border-radius: 3px; }
-.knopf { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
-.knopf::after { content: ""; position: absolute; left: 3px; top: 3px; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+.knopf { border-radius: 7px; color: #fff; font: 700 10px/14px system-ui, "Segoe UI", sans-serif; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,.35); }
+.knopf.rechtschreibung { background: #e5484d; }
 .knopf.grammatik { background: #f0a020; }
 .knopf.stil { background: #3e8ef7; }
 .popup { position: fixed; pointer-events: auto; width: 320px; max-width: calc(100vw - 16px); background: #fff; color: #1f2328;
@@ -23,7 +23,12 @@ const RSP_CSS = `
 .erklaerung { margin-bottom: 9px; }
 .vergleich { margin-bottom: 9px; padding: 7px 9px; background: #f6f8fa; border-radius: 6px; }
 .vergleich del { color: #cf222e; text-decoration: line-through; } .vergleich ins { color: #1a7f37; text-decoration: none; font-weight: 600; }
-.knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+.zeile { display: flex; align-items: flex-start; gap: 7px; padding: 5px 0; border-top: 1px solid #eef1f4; cursor: pointer; }
+.zeile input { margin: 2px 0 0; }
+.zeile .punkt { margin-top: 5px; flex: none; }
+.zeilentext small { display: block; color: #57606a; font-size: 11.5px; }
+.vergleich-kurz del { color: #cf222e; text-decoration: line-through; } .vergleich-kurz ins { color: #1a7f37; text-decoration: none; font-weight: 600; }
+.knoepfe { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
 .knoepfe button { font: inherit; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; background: #eef1f4; color: #1f2328; }
 .knoepfe button:hover { background: #e2e6ea; }
 .knoepfe button.primaer { background: #2f81f7; color: #fff; font-weight: 600; }
@@ -58,12 +63,16 @@ class RspEbene {
     this.ziele = [];
     for (const e of eintraege) {
       if (e.art === 'knopf') {
-        const g = 14, r = e.rechteck;
-        let x = r.right + 2, y = r.top + (r.height - g) / 2;
-        if (x + g > sichtbar.right) x = sichtbar.right - g - 1;
-        if (y < sichtbar.top || y > sichtbar.bottom - g) continue;
-        frag.appendChild(this.kasten('knopf ' + e.typ, x, y, g, g));
-        this.ziele.push({ knopf: true, rechtecke: [{ left: x - 4, top: y - 4, right: x + g + 4, bottom: y + g + 4 }], daten: e.daten });
+        // Zähler hochgestellt hinter dem Satzende, damit er den folgenden Text kaum verdeckt.
+        const t = String(e.anzahl || ''), b = Math.max(14, 6 + 6 * t.length), h = 14, r = e.rechteck;
+        let x = r.right + 1, y = r.top - 8;
+        if (x + b > sichtbar.right) x = sichtbar.right - b - 1;
+        if (y < sichtbar.top) y = sichtbar.top;
+        if (y > sichtbar.bottom - h) continue;
+        const k = this.kasten('knopf ' + e.typ, x, y, b, h);
+        k.textContent = t;
+        frag.appendChild(k);
+        this.ziele.push({ knopf: true, rechtecke: [{ left: x - 3, top: y - 3, right: x + b + 3, bottom: y + h + 3 }], daten: e.daten });
       } else {
         const rs = e.rechtecke.map(r => rspSchneiden(r, sichtbar)).filter(Boolean);
         for (const r of rs) frag.appendChild(this.kasten('wort ' + e.typ, r.left, r.top, r.right - r.left, r.bottom - r.top));

@@ -41,13 +41,33 @@ class RspPopup {
       body.appendChild(p);
     }
     if (inhalt.vergleich) body.appendChild(rspVergleich(doc, inhalt.vergleich.alt, inhalt.vergleich.neu));
+    // Auswahlliste: je Vorschlag eine Zeile mit Haken; Knöpfe bekommen die gewählten Einträge.
+    const haken = [];
+    for (const z of inhalt.liste || []) {
+      const zeile = doc.createElement('label');
+      zeile.className = 'zeile';
+      const cb = doc.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = z.an !== false;
+      haken.push(cb);
+      const punkt = doc.createElement('span');
+      punkt.className = 'punkt ' + z.typ;
+      const text = doc.createElement('span');
+      text.className = 'zeilentext';
+      if (z.vergleich) text.appendChild(rspVergleich(doc, z.vergleich.alt, z.vergleich.neu, true));
+      else text.textContent = z.text;
+      if (z.erklaerung) { const e = doc.createElement('small'); e.textContent = z.erklaerung; text.appendChild(e); }
+      zeile.append(cb, punkt, text);
+      body.appendChild(zeile);
+    }
+    const auswahl = () => (inhalt.liste || []).filter((z, i) => haken[i].checked);
     const knoepfe = doc.createElement('div');
     knoepfe.className = 'knoepfe';
     for (const k of inhalt.knoepfe) {
       const b = doc.createElement('button');
       b.textContent = k.text;
       if (k.primaer) b.className = 'primaer';
-      b.addEventListener('click', () => { this.schliessen(); k.aktion(); });
+      b.addEventListener('click', () => { const a = auswahl(); this.schliessen(); k.aktion(a); });
       knoepfe.appendChild(b);
     }
     body.appendChild(knoepfe);
@@ -71,19 +91,23 @@ class RspPopup {
 }
 
 /** Wortweiser Vergleich alt/neu: gestrichen rot, neu grün. */
-function rspVergleich(doc, alt, neu) {
+function rspVergleich(doc, alt, neu, kurz) {
   const a = alt.split(/(\s+)/), b = neu.split(/(\s+)/);
   const n = a.length, m = b.length;
   const t = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) t[i][j] = a[i] === b[j] ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
-  const box = doc.createElement('div');
-  box.className = 'vergleich';
+  const box = doc.createElement(kurz ? 'span' : 'div');
+  box.className = kurz ? 'vergleich-kurz' : 'vergleich';
   const teil = (tag, text) => { const e = doc.createElement(tag); e.textContent = text; box.appendChild(e); };
   let i = 0, j = 0;
   while (i < n || j < m) {
     if (i < n && j < m && a[i] === b[j]) { box.appendChild(doc.createTextNode(a[i])); i++; j++; }
     else if (i < n && (j >= m || t[i + 1][j] >= t[i][j + 1])) { teil('del', a[i]); i++; }
-    else { teil('ins', b[j]); j++; }
+    else {
+      if (kurz && box.lastChild && box.lastChild.nodeName === 'DEL') box.appendChild(doc.createTextNode(' → '));
+      teil('ins', b[j]);
+      j++;
+    }
   }
   return box;
 }

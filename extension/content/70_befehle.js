@@ -38,6 +38,15 @@ function rspOriginal(p) {
 }
 
 let rspMarkierung = null;
+
+/** Markierter Text mit Zeilenumbrüchen; Range.toString() lässt <br> weg. */
+function rspMarkierungText(p) {
+  if (!rspMarkierung) return '';
+  p.modell.aufbauen();
+  const von = p.modell.positionVon(rspMarkierung.startContainer, rspMarkierung.startOffset);
+  const bis = p.modell.positionVon(rspMarkierung.endContainer, rspMarkierung.endOffset);
+  return von >= 0 && bis > von ? p.modell.text.slice(von, bis) : rspMarkierung.toString();
+}
 document.addEventListener('contextmenu', () => {
   const sel = document.getSelection();
   rspMarkierung = sel && sel.rangeCount && !sel.isCollapsed && document.body.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
@@ -49,7 +58,7 @@ browser.runtime.onMessage.addListener(n => {
   switch (n.art) {
     case 'inhalt_holen': {
       const eigen = rspEigenerBereich(p);
-      return Promise.resolve({ ok: true, eigen: eigen.text, original: rspOriginal(p), markierung: rspMarkierung ? rspMarkierung.toString() : '' });
+      return Promise.resolve({ ok: true, eigen: eigen.text, original: rspOriginal(p), markierung: rspMarkierungText(p) });
     }
     case 'eigen_ersetzen': {
       const b = rspEigenerBereich(p);

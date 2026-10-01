@@ -3,7 +3,7 @@
 
 const RSP_PAUSE_MS = 2500;   // so lange nach dem letzten Tastendruck gilt ein Satz mit Satzzeichen als fertig
 const RSP_PAUSE_OFFEN_MS = 4000; // ebenso für Sätze ohne Satzzeichen ab drei Wörtern
-const RSP_RUHE_MS = 900;     // Wartezeit nach einer Eingabe, bevor Sätze gesucht werden
+const RSP_RUHE_MS = 600;     // Wartezeit nach einer Eingabe, bevor Sätze gesucht werden
 
 function rspSenden(nachricht) {
   try {
@@ -93,6 +93,7 @@ class RspPruefer {
   anfragen(s, text) {
     const eintrag = { zustand: 'wartet' };
     this.cache.set(s.text, eintrag);
+    this.statusMelden();
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
     const kontext = text.slice(s.absatzVon, s.absatzBis).slice(0, 800);
     rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen }).then(a => {
@@ -103,10 +104,11 @@ class RspPruefer {
           this.ebene.hinweis('Rechtschreibprüfung: ' + (a.fehler || 'Hilfsprogramm nicht erreichbar'), 6000);
         }
         setTimeout(() => { if (this.cache.get(s.text) === eintrag) this.cache.delete(s.text); }, 30000);
+        this.zeichnenBald();
         return;
       }
       eintrag.zustand = 'fertig';
-      eintrag.fehler = a.fehler || [];
+      eintrag.fehler = (a.fehler || []).filter(f => !/ {2}/.test(f.wort)); // Leerzeichen prüft die Erweiterung selbst
       eintrag.satzVorschlag = a.satz_vorschlag || '';
       eintrag.satzErklaerung = a.satz_erklaerung || '';
       this.zeichnenBald();
@@ -119,21 +121,32 @@ class RspPruefer {
     this.modell.aufbauen();
     this.saetze = rspSaetze(this.modell.text);
     const eintraege = [];
+    let befunde = 0;
     for (const s of this.saetze) {
       const e = this.cache.get(s.text);
       if (!e || e.zustand !== 'fertig') continue;
-      for (const f of e.fehler) {
-        if (this.ignoriert.has(s.text + '|' + f.wort + '|' + f.nr)) continue;
+      const sichtbare = this.offeneFehler(s.text, e);
+      for (const f of sichtbare) {
         const pos = rspWortFinden(s.text, f.wort, f.nr);
-        if (pos < 0) continue;
         const von = s.start + pos, bis = von + f.wort.length;
         eintraege.push({ art: 'wort', typ: f.typ, rechtecke: this.modell.rechtecke(von, bis), daten: { art: 'wort', satz: s.text, fehler: f } });
       }
-      if (e.satzVorschlag && !this.ignoriert.has(s.text + '|satz')) {
+      const satzOffen = e.satzVorschlag && !this.ignoriert.has(s.text + '|satz');
+      const anzahl = sichtbare.length + (satzOffen ? 1 : 0);
+      befunde += anzahl;
+      if (anzahl) {
         const rs = this.modell.rechtecke(s.ende - 1, s.ende);
-        if (rs.length) eintraege.push({ art: 'knopf', typ: 'stil', rechteck: rs[rs.length - 1], daten: { art: 'satz', satz: s.text, eintrag: e } });
+        const typ = ['rechtschreibung', 'grammatik'].find(t => sichtbare.some(f => f.typ === t)) || 'stil';
+        if (rs.length) eintraege.push({ art: 'knopf', typ, anzahl, rechteck: rs[rs.length - 1], daten: { art: 'satz', satz: s.text, eintrag: e } });
       }
     }
+    for (const l of rspLeerzeichenBefunde(this.modell.text)) {
+      const schluessel = 'lokal|' + this.modell.text.slice(Math.max(0, l.von - 15), l.bis + 15);
+      if (this.ignoriert.has(schluessel)) continue;
+      befunde++;
+      eintraege.push({ art: 'wort', typ: 'grammatik', rechtecke: this.modell.rechtecke(l.von, l.bis), daten: { art: 'lokal', befund: l, schluessel } });
+    }
+    this.statusMelden(befunde);
     const jetzt = Date.now();
     this.blitze = this.blitze.filter(b => b.bis > jetzt);
     for (const b of this.blitze) eintraege.push({ art: 'wort', typ: 'blitz', rechtecke: this.modell.rechtecke(b.von, b.bisPos) });
@@ -145,6 +158,7 @@ class RspPruefer {
     this.aktiv = !!an;
     this.popup.schliessen();
     this.zeichnen();
+    this.statusMelden();
     if (an) this.planen(100);
   }
 
@@ -164,7 +178,8 @@ class RspPruefer {
     if (z.knopf) ev.preventDefault();
     const anker = z.rechtecke[z.rechtecke.length - 1];
     // Erst nach dem Klick öffnen, damit die Cursorsetzung das Popup nicht gleich wieder schließt.
-    setTimeout(() => (z.daten.art === 'satz' ? this.satzPopup(z.daten, anker) : this.wortPopup(z.daten, anker)), 0);
+    const art = { satz: 'satzListe', lokal: 'lokalPopup', wort: 'wortPopup' }[z.daten.art];
+    setTimeout(() => this[art](z.daten, anker), 0);
   }
 
   wortPopup(d, anker) {
