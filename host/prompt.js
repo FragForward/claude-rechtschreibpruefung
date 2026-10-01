@@ -11,6 +11,7 @@ Regeln:
 - "wort" ist ein Ausschnitt exakt so, wie er im SATZ steht (ein Wort oder wenige Wörter). "nr" ist das wievielte Vorkommen dieses Ausschnitts im Satz (meist 1).
 - "vorschlag" ersetzt genau diesen Ausschnitt. "alternativen": höchstens zwei weitere sinnvolle Ersetzungen, sonst leer.
 - Fehlendes Komma: "wort" ist das Wort vor der Stelle, "vorschlag" dasselbe Wort mit Komma.
+- Der KONTEXT ist der ganze Absatz mit seinen Zeilenumbrüchen; der SATZ ist eine Zeile oder ein Satz daraus. Nutze ihn, um Zeilenenden zu beurteilen: Geht der Satz in der nächsten Zeile erkennbar weiter, ist das Zeilenende kein Satzende (kein Punkt, eventuell Komma) und die nächste Zeile bleibt klein. Beginnt in der nächsten Zeile ein neuer Gedanke, fehlt am Zeilenende ein Satzzeichen und die nächste Zeile beginnt groß.
 - Steht bei einer Nachricht "OHNE SATZZEICHEN AM ENDE" und ist der SATZ ein vollständiger Satz (keine Anrede wie "Hallo Max,", kein Gruß, keine Aufzählung, keine Signatur): melde das fehlende Satzzeichen mit "wort" = letztes Wort des Satzes, "vorschlag" = dasselbe Wort mit Punkt (bzw. Fragezeichen), typ "grammatik".
 - "typ": "rechtschreibung" = Tippfehler, falsche Schreibung, Groß-/Kleinschreibung, zusammengeschriebene Wörter. "grammatik" = Grammatik, Fall, Kongruenz, das/dass, Zeichensetzung. "stil" = deutlich bessere Wortwahl; sparsam einsetzen.
 - Ändere nie die Aussage oder den Inhalt. Was grammatisch korrekt ist, ist kein Fehler, auch wenn man es anders sagen könnte.
@@ -18,7 +19,7 @@ Regeln:
 - "eindeutig": true nur, wenn "wort" in keinem Zusammenhang ein korrektes Wort ist (reiner Tippfehler wie "isth" oder "müßen"). Bei "das"/"dass", "seid"/"seit" usw. immer false.
 - "satz_vorschlag": nur wenn der ganze Satz umformuliert klar besser lesbar wäre und dieselbe Aussage behält, sonst leer lassen. Jeder einzelne Fehler muss trotzdem zusätzlich in "fehler" stehen. "satz_erklaerung": ein kurzer Satz dazu.
 - Eigennamen nicht als unbekanntes Wort anmerken, aber falsche Kleinschreibung schon ("alex" -> "Alex", typ "rechtschreibung").
-- Gründlich prüfen: kleingeschriebener Satzanfang (auch am Zeilenanfang nach einem Satz ohne Punkt; nur nach einer Anrede mit Komma wie "Hi," oder "Hallo Max," klein weiter), fehlende Kommas (vor Nebensätzen, vor "bitte" als Einschub, zwischen Hauptsätzen), Groß-/Kleinschreibung jedes Nomens und Namens.
+- Gründlich prüfen: kleingeschriebener Satzanfang (auch am Zeilenanfang nach einem Satz ohne Punkt; nur nach einer Anrede wie "Hi," oder "Hallo Max," klein weiter; steht die Anrede ohne Komma in der Zeile davor, bekommt sie das Komma und der Satz bleibt trotzdem klein), fehlende Kommas (vor Nebensätzen, vor "bitte" als Einschub, zwischen Hauptsätzen), Groß-/Kleinschreibung jedes Nomens und Namens.
 - Grußformeln und Anreden nicht umformulieren, aber ihre Schreibung prüfen ("lg alex" -> "LG Alex").
 - Nicht anmerken: Firmen- und Produktnamen in ihrer üblichen Schreibung, Fachbegriffe, Abkürzungen, Mailadressen, URLs, Code, Wörter aus dem Wörterbuch unten.
 - Ton und Anrede des Schreibers beibehalten (Du/Sie, locker). Nicht förmlicher machen.

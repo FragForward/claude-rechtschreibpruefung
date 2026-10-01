@@ -95,7 +95,7 @@ class RspPruefer {
     this.cache.set(s.text, eintrag);
     this.statusMelden();
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
-    const kontext = text.slice(s.absatzVon, s.absatzBis).slice(0, 800);
+    const kontext = rspKontext(text, s);
     rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen }).then(a => {
       if (!a.ok) {
         eintrag.zustand = 'fehler';

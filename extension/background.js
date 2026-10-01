@@ -75,6 +75,21 @@ browser.runtime.onMessage.addListener((n, sender) => {
 
 browser.composeScripts.register({ css: [], js: [{ file: 'content.js' }] });
 
+/** Offene Verfassen-Tabs; windows.getAll() liefert Mailfenster nur auf ausdrückliche Nachfrage. */
+async function rspVerfassenTabs() {
+  const tabs = await browser.tabs.query({});
+  return tabs.filter(t => t.type === 'messageCompose');
+}
+
+async function rspMailfensterOffen() {
+  return (await rspVerfassenTabs()).length > 0;
+}
+
+// Nach einem Neuladen laufen offene Mailfenster ohne Prüfung weiter; dort das Skript neu einsetzen.
+rspVerfassenTabs().then(tabs => {
+  for (const t of tabs) browser.tabs.executeScript(t.id, { file: 'content.js' }).catch(e => console.warn('Rechtschreibprüfung: Einsetzen fehlgeschlagen', e));
+});
+
 // Rechtsklick auf markierten Text im Verfassen-Fenster
 try {
   browser.menus.create({ id: 'rsp-verbessern', title: 'Mit Claude verbessern', contexts: ['compose_body'] });
@@ -97,8 +112,7 @@ setInterval(async () => {
     if (!rspEigenerStand) return;
     const b = await rspAnHost({ art: 'baustand', eigener: rspEigenerStand });
     if (!b.ok || !b.stand || b.stand === rspEigenerStand) return;
-    const fenster = await browser.windows.getAll();
-    if (fenster.some(w => w.type === 'messageCompose')) return;
+    if (await rspMailfensterOffen()) return;
     rspAnHost({ art: 'neu_laden', stand: b.stand });
     setTimeout(() => browser.runtime.reload(), 300);
   } catch (e) {

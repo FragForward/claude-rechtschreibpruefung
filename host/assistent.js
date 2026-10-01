@@ -10,15 +10,23 @@ function systemPrompt(profil) {
   return GRUND + (profil.trim() ? '\n\n## Schreibprofil des Schreibers\n' + profil.trim() : '');
 }
 
+// Zeilen bleiben Zeilen, bekommen aber ihre Satzzeichen (Rückmeldung 01.10.2026).
+const ZEILEN = `Jeder Zeilenumbruch (\\n) bleibt genau an seiner Stelle. Ein Zeilenende ohne Satzzeichen ist trotzdem zu prüfen:
+- Anrede ("hallo georg") -> großschreiben und Komma: "Hallo Georg,"
+- Satz endet am Zeilenende -> Punkt, Fragezeichen oder Ausrufezeichen ergänzen; die nächste Zeile beginnt dann groß.
+- Satz geht in der nächsten Zeile weiter -> kein Satzzeichen, nächste Zeile bleibt klein.
+- Gruß ("lg alex") -> Schreibung korrigieren ("LG Alex"), kein Punkt.`;
+
 const AUFGABEN = {
   schreiben: `AUFGABE: Schreibe eine Antwort auf die ursprüngliche Mail. Berücksichtige den Wunsch des Schreibers und einen schon vorhandenen Entwurf.
 Nur der Mailtext mit Anrede und Gruß, ohne Signatur, ohne Zitat, ohne Betreff. Absätze mit Leerzeile trennen.
 Antwortformat: {"text":"...","hinweis":"ein Satz, was du beachtet hast"}`,
   verbessern: `AUFGABE: Verbessere den Entwurf: Rechtschreibung, Grammatik, Zeichensetzung, Klarheit, Satzbau. Aussage, Länge und Stil des Schreibers beibehalten, nicht förmlicher machen, nichts Neues erfinden.
-Zeilenumbrüche und Absätze des Entwurfs beibehalten (als \\n im JSON).
+${ZEILEN}
 Antwortformat: {"text":"...","hinweis":"ein Satz, was du geändert hast"}`,
   markierung: `AUFGABE: Verbessere nur den MARKIERTEN TEXT (Rechtschreibung, Grammatik, Klarheit). Aussage und Stil beibehalten. Der Entwurf dient nur als Zusammenhang.
-Gib nur den Ersatz für den markierten Text zurück. Zeilenumbrüche und Absätze des markierten Textes genau beibehalten (jede Zeile bleibt eine eigene Zeile, als \\n im JSON).
+Gib nur den Ersatz für den markierten Text zurück.
+${ZEILEN}
 Antwortformat: {"text":"...","hinweis":"ein Satz, was du geändert hast"}`,
   pruefen: `AUFGABE: Prüfe den Entwurf vor dem Absenden inhaltlich: Beantwortet er alle Fragen und Punkte der ursprünglichen Mail? Passt der Ton? Gibt es Missverständliches, Widersprüche, fehlende Angaben (Termin, Ort, erwähnter Anhang) oder sprachliche Fehler?
 Jeder Hinweis kann eine konkrete Änderung haben: "alt" ist ein Ausschnitt exakt aus dem Entwurf, "neu" sein Ersatz. Für einen fehlenden Punkt: "alt" = der Satz im Entwurf, nach dem ergänzt werden soll (vor Gruß und Namen), "neu" = derselbe Satz plus die Ergänzung.

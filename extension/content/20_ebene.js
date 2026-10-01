@@ -48,6 +48,8 @@ class RspEbene {
     this.marken = this.schatten.querySelector('.marken');
     this.oben = this.schatten.querySelector('.oben');
     this.ziele = [];
+    // Ebenen einer früheren Add-on-Fassung ausblenden; entfernt würden sie sich wieder einhängen.
+    for (const alt of doc.querySelectorAll('rsp-ebene')) alt.style.display = 'none';
     this.einhaengen();
   }
 

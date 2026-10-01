@@ -165,6 +165,17 @@ function rspSaetzeImAbsatz(text, von, bis, erg) {
   hinzu(start, bis, false);
 }
 
+/** Zusammenhang für Claude: der ganze Absatz bis zur nächsten Leerzeile, mit Zeilenumbrüchen. */
+function rspKontext(text, s) {
+  let von = text.lastIndexOf('\n\n', s.start);
+  von = von < 0 ? 0 : von + 2;
+  let bis = text.indexOf('\n\n', s.ende);
+  if (bis < 0) bis = text.length;
+  if (s.start - von > 600) von = text.lastIndexOf('\n', s.start - 600) + 1;
+  if (bis - s.ende > 300) bis = s.ende + 300;
+  return text.slice(von, bis).trim();
+}
+
 /** Findet das nr-te Vorkommen von wort im Satz, bevorzugt an Wortgrenzen. */
 function rspWortFinden(satz, wort, nr) {
   if (!wort) return -1;
