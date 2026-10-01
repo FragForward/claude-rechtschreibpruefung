@@ -33,6 +33,9 @@ Gelerntes liegt in `daten/` im Haupt-Checkout (nicht im Repo):
 - **Blauer Punkt am Satzende** = Vorschlag für den ganzen Satz.
 - **Autokorrektur**: Wird derselbe eindeutige Tippfehler 3-mal übernommen, korrigiert das Add-on ihn künftig beim Tippen sofort. Backspace direkt danach nimmt es zurück. "Immer automatisch" im Popup macht das sofort.
 - **Lernen**: Nach 10 Minuten ohne Schreiben wertet die Sitzung das Journal aus, aktualisiert `schreibprofil.md` und startet mit dem neuen Profil frisch.
+- **Knopf "Claude" in der Symbolleiste** des Verfassen-Fensters: Prüfung für diese Mail ein/aus, Antwort schreiben (optional mit Stichworten), Antwort verbessern, Antwort prüfen. Ergebnisse erscheinen in einem eigenen Fenster und kommen erst mit "Übernehmen" in die Mail.
+- **Rechtsklick auf markierten Text**: "Mit Claude verbessern".
+- Der Assistent läuft in einer zweiten Sitzung mit Sonnet und startet nach jeder Aufgabe frisch.
 - Einstellungen, Listen und Profil: Add-ons > Rechtschreibprüfung > Einstellungen.
 
 ## Installation
@@ -43,7 +46,7 @@ Voraussetzungen: Node.js, Claude Code mit Abo-Login (`claude` einmal starten, `/
 powershell -ExecutionPolicy Bypass -File installieren.ps1
 ```
 
-Das Skript meldet das Hilfsprogramm bei Thunderbird an (Registry unter HKCU) und baut `dist/rechtschreibpruefung.xpi`. Danach in Thunderbird: Add-ons und Themes > Zahnrad > Add-on aus Datei installieren.
+Das Skript meldet das Hilfsprogramm bei Thunderbird an (Registry unter HKCU) und baut `dist/rechtschreibpruefung-<version>.xpi`. Danach in Thunderbird: Add-ons und Themes > Zahnrad > Add-on aus Datei installieren.
 
 Empfohlen: In Thunderbird die eingebaute Rechtschreibprüfung beim Schreiben ausschalten und LanguageTool deaktivieren, sonst gibt es doppelte Unterstreichungen.
 

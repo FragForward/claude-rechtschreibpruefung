@@ -16,7 +16,7 @@ class RspAutokorrektur {
 
   /** beforeinput: bei Leerzeichen/Satzzeichen das Wort davor samt Trenner in einem Schritt ersetzen. */
   vorEingabe(ev) {
-    if (this.inArbeit) return;
+    if (this.inArbeit || !this.p.aktiv) return;
     if (ev.inputType === 'insertText' && ev.data && RSP_TRENNER.test(ev.data) && this.ersetzenVorCursor(ev.data)) {
       ev.preventDefault();
       return;
@@ -26,7 +26,7 @@ class RspAutokorrektur {
 
   /** keydown: Enter korrigiert das letzte Wort der Zeile, Backspace direkt danach nimmt die Korrektur zurück. */
   taste(ev) {
-    if (this.inArbeit || ev.isComposing || ev.ctrlKey || ev.altKey || ev.metaKey) return;
+    if (this.inArbeit || !this.p.aktiv || ev.isComposing || ev.ctrlKey || ev.altKey || ev.metaKey) return;
     if (ev.key === 'Backspace' && this.letzte && this.zuruecknehmen()) { ev.preventDefault(); return; }
     if (ev.key === 'Enter') this.ersetzenVorCursor('');
   }

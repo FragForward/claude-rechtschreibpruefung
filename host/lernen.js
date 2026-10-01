@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { log } = require('./log');
 
-const STANDARD = { modell: 'haiku', autoSchwelle: 3, pauseMinuten: 10, maxAnfragenProSitzung: 150, maxStundenProSitzung: 8 };
+const STANDARD = { modell: 'haiku', modellAssistent: 'sonnet', autoSchwelle: 3, pauseMinuten: 10, maxAnfragenProSitzung: 150, maxStundenProSitzung: 8 };
 const TYPEN = new Set(['rechtschreibung', 'grammatik', 'stil']);
 
 class Lernen {
@@ -113,7 +113,7 @@ class Lernen {
     }));
     const sv = typeof daten.satz_vorschlag === 'string' ? daten.satz_vorschlag.trim() : '';
     return {
-      fehler,
+      fehler: zusammenfassen(fehler),
       satz_vorschlag: sv && sv !== satz.trim() ? sv : '',
       satz_erklaerung: typeof daten.satz_erklaerung === 'string' ? daten.satz_erklaerung : '',
     };
@@ -124,7 +124,7 @@ class Lernen {
    * ab der Schwelle wird genau dieses Wort automatisch korrigiert (Festlegung 01.10.2026).
    */
   aktion(n) {
-    const eintrag = { art: n.aktion, von: n.von || '', nach: n.nach || '', typ: n.typ || '' };
+    const eintrag = { art: n.aktion, von: String(n.von || '').slice(0, 2000), nach: String(n.nach || '').slice(0, 2000), typ: n.typ || '' };
     this.journal(eintrag);
     if (n.aktion !== 'uebernommen' || !n.von || !n.nach || n.typ === 'satz') return {};
 
@@ -147,6 +147,23 @@ class Lernen {
     }
     return { autokorrektur: auto, neuAutomatisch, anzahl: z.anzahl };
   }
+}
+
+/** Zwei Befunde für dieselbe Stelle zu einem machen, z. B. "alex" -> "Alex" und "alex" -> "alex." ergibt "Alex.". */
+function zusammenfassen(fehler) {
+  const erg = [];
+  for (const f of fehler) {
+    const da = erg.find(x => x.wort === f.wort && x.nr === f.nr);
+    if (!da) { erg.push(f); continue; }
+    const zeichen = v => (v.startsWith(f.wort) && /^[.,;:!?]+$/.test(v.slice(f.wort.length)) ? v.slice(f.wort.length) : '');
+    if (zeichen(f.vorschlag)) da.vorschlag += zeichen(f.vorschlag);
+    else if (zeichen(da.vorschlag)) { da.vorschlag = f.vorschlag + zeichen(da.vorschlag); da.typ = f.typ; }
+    else continue;
+    da.erklaerung = [da.erklaerung, f.erklaerung].filter(Boolean).join(' ');
+    da.eindeutig = false;
+    da.alternativen = [];
+  }
+  return erg;
 }
 
 module.exports = { Lernen };

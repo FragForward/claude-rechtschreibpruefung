@@ -6,6 +6,7 @@ const { log, logStarten } = require('./log');
 const { Sitzung } = require('./sitzung');
 const { Lernen } = require('./lernen');
 const prompt = require('./prompt');
+const assistent = require('./assistent');
 
 const DATEN = process.env.RSP_DATEN || path.join(__dirname, '..', 'daten');
 fs.mkdirSync(DATEN, { recursive: true });
@@ -17,6 +18,11 @@ const sitzung = new Sitzung({
   arbeitsOrdner: path.join(DATEN, 'sitzung'),
   modell: () => lernen.einstellungen().modell,
   systemPrompt: () => prompt.systemPrompt(lernen.profil(), lernen.woerterbuch()),
+});
+const assistentSitzung = new Sitzung({
+  arbeitsOrdner: path.join(DATEN, 'assistent'),
+  modell: () => lernen.einstellungen().modellAssistent,
+  systemPrompt: () => assistent.systemPrompt(lernen.profil()),
 });
 let auswertungLaeuft = false;
 
@@ -36,7 +42,7 @@ process.stdin.on('data', stueck => {
       .catch(e => { log('Fehler bei', n.art, e.message); senden({ id: n.id, ok: false, fehler: e.message }); });
   }
 });
-process.stdin.on('end', () => { log('Erweiterung getrennt, Host endet'); sitzung.beenden(); process.exit(0); });
+process.stdin.on('end', () => { log('Erweiterung getrennt, Host endet'); sitzung.beenden(); assistentSitzung.beenden(); process.exit(0); });
 
 function senden(objekt) {
   const inhalt = Buffer.from(JSON.stringify(objekt), 'utf8');
@@ -53,7 +59,7 @@ async function bearbeiten(n) {
 
     case 'pruefen': {
       lernen.aktivitaet();
-      const roh = await sitzung.fragen(prompt.pruefNachricht(String(n.satz || ''), String(n.kontext || '')));
+      const roh = await sitzung.fragen(prompt.pruefNachricht(String(n.satz || ''), String(n.kontext || ''), n.offen === true));
       const erg = lernen.antwortAuswerten(roh, String(n.satz || ''));
       lernen.journal({ art: 'geprueft', satz: n.satz, fehler: erg.fehler.map(f => ({ wort: f.wort, vorschlag: f.vorschlag, typ: f.typ })), satz_vorschlag: erg.satz_vorschlag });
       return erg;
@@ -87,7 +93,20 @@ async function bearbeiten(n) {
       const alt = lernen.einstellungen().modell;
       const e = lernen.einstellungenSetzen(n.einstellungen || {});
       if (e.modell !== alt) sitzung.neustarten();
+      if (assistentSitzung.bereit) assistentSitzung.neustarten();
       return { einstellungen: e };
+    }
+
+    case 'assistent_vorwaermen':
+      assistentSitzung.vorwaermen();
+      return {};
+
+    case 'assistent': {
+      if (!assistent.AUFGABEN[n.aufgabe]) throw new Error('Unbekannte Aufgabe: ' + n.aufgabe);
+      lernen.aktivitaet();
+      const roh = await assistentSitzung.fragen(assistent.nachricht(n), 180000);
+      assistentSitzung.neustarten(); // jede Aufgabe unabhängig, nichts aus der vorigen Mail mitnehmen
+      return assistent.auswerten(roh, n.aufgabe);
     }
 
     case 'auswerten':
@@ -113,6 +132,7 @@ async function auswerten() {
     lernen.journalKuerzen(eintraege.length);
     log('Profil aktualisiert');
     sitzung.neustarten();
+    if (assistentSitzung.bereit) assistentSitzung.neustarten();
     return { profil: lernen.profil() };
   } finally {
     auswertungLaeuft = false;
@@ -127,6 +147,7 @@ setInterval(() => {
   }
   const e = lernen.einstellungen();
   if (sitzung.neustartFaellig(e.maxAnfragenProSitzung, e.maxStundenProSitzung)) sitzung.neustarten();
+  if (assistentSitzung.neustartFaellig(40, e.maxStundenProSitzung)) assistentSitzung.neustarten();
 }, 30000);
 
 sitzung.vorwaermen();

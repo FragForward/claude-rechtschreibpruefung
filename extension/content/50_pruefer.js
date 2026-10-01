@@ -2,6 +2,7 @@
 // Prüfer je Editor: erkennt fertige Sätze, fragt Claude über den Host, zeichnet und wendet Vorschläge an.
 
 const RSP_PAUSE_MS = 2500;   // so lange nach dem letzten Tastendruck gilt ein Satz mit Satzzeichen als fertig
+const RSP_PAUSE_OFFEN_MS = 4000; // ebenso für Sätze ohne Satzzeichen ab drei Wörtern
 const RSP_RUHE_MS = 900;     // Wartezeit nach einer Eingabe, bevor Sätze gesucht werden
 
 function rspSenden(nachricht) {
@@ -27,6 +28,7 @@ class RspPruefer {
     this.zuletztGetippt = 0;
     this.alleFertig = false;
     this.letzterFehler = 0;
+    this.aktiv = true;
     this.binden();
     rspSenden({ art: 'autokorrektur_liste' }).then(a => this.auto.setzen(a.autokorrektur));
     this.planen(300);
@@ -68,21 +70,23 @@ class RspPruefer {
 
   /** Schickt alle fertigen, noch ungeprüften Sätze an den Host. */
   durchlauf() {
-    if (!this.element.isConnected) return;
+    if (!this.element.isConnected || !this.aktiv) return;
     this.modell.aufbauen();
     const text = this.modell.text, c = this.modell.cursor(), jetzt = Date.now();
     this.saetze = rspSaetze(text);
-    let nachholen = false;
+    let nachholen = 0;
     for (const s of this.saetze) {
       if (this.cache.has(s.text) || s.text.length < 4) continue;
       let fertig = this.alleFertig || c < s.start || c > s.ende;
-      if (!fertig && s.abgeschlossen) {
-        if (jetzt - this.zuletztGetippt >= RSP_PAUSE_MS) fertig = true; else nachholen = true;
+      if (!fertig) {
+        const pause = s.abgeschlossen ? RSP_PAUSE_MS : (s.text.split(/\s+/).length >= 3 ? RSP_PAUSE_OFFEN_MS : 0);
+        if (pause && jetzt - this.zuletztGetippt >= pause) fertig = true;
+        else if (pause) nachholen = Math.min(nachholen || Infinity, pause - (jetzt - this.zuletztGetippt));
       }
       if (fertig) this.anfragen(s, text);
     }
     this.alleFertig = false;
-    if (nachholen) this.planen(RSP_PAUSE_MS - (jetzt - this.zuletztGetippt) + 50);
+    if (nachholen) this.planen(nachholen + 50);
     this.zeichnen();
   }
 
@@ -91,7 +95,7 @@ class RspPruefer {
     this.cache.set(s.text, eintrag);
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
     const kontext = text.slice(s.absatzVon, s.absatzBis).slice(0, 800);
-    rspSenden({ art: 'pruefen', satz: s.text, kontext }).then(a => {
+    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen }).then(a => {
       if (!a.ok) {
         eintrag.zustand = 'fehler';
         if (Date.now() - this.letzterFehler > 60000) {
@@ -111,6 +115,7 @@ class RspPruefer {
 
   zeichnen() {
     if (!this.element.isConnected) return;
+    if (!this.aktiv) { this.ebene.zeichnen([], this.modell.sichtbar()); return; }
     this.modell.aufbauen();
     this.saetze = rspSaetze(this.modell.text);
     const eintraege = [];
@@ -133,6 +138,14 @@ class RspPruefer {
     this.blitze = this.blitze.filter(b => b.bis > jetzt);
     for (const b of this.blitze) eintraege.push({ art: 'wort', typ: 'blitz', rechtecke: this.modell.rechtecke(b.von, b.bisPos) });
     this.ebene.zeichnen(eintraege, this.modell.sichtbar());
+  }
+
+  /** Prüfung und Autokorrektur für diese Mail ein- oder ausschalten. */
+  schalten(an) {
+    this.aktiv = !!an;
+    this.popup.schliessen();
+    this.zeichnen();
+    if (an) this.planen(100);
   }
 
   /** Kurzes grünes Aufleuchten nach einer Autokorrektur. */

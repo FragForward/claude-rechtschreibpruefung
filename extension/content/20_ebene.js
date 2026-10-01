@@ -9,7 +9,8 @@ const RSP_CSS = `
 .wort.grammatik { border-color: #f0a020; background: rgba(240, 160, 32, .14); }
 .wort.stil { border-color: #3e8ef7; background: rgba(62, 142, 247, .10); }
 .wort.blitz { border: none; background: rgba(46, 160, 67, .30); border-radius: 3px; }
-.knopf { border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.18); }
+.knopf { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.knopf::after { content: ""; position: absolute; left: 3px; top: 3px; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
 .knopf.grammatik { background: #f0a020; }
 .knopf.stil { background: #3e8ef7; }
 .popup { position: fixed; pointer-events: auto; width: 320px; max-width: calc(100vw - 16px); background: #fff; color: #1f2328;
@@ -57,8 +58,8 @@ class RspEbene {
     this.ziele = [];
     for (const e of eintraege) {
       if (e.art === 'knopf') {
-        const g = 9, r = e.rechteck;
-        let x = r.right, y = r.top - 3;
+        const g = 14, r = e.rechteck;
+        let x = r.right + 2, y = r.top + (r.height - g) / 2;
         if (x + g > sichtbar.right) x = sichtbar.right - g - 1;
         if (y < sichtbar.top || y > sichtbar.bottom - g) continue;
         frag.appendChild(this.kasten('knopf ' + e.typ, x, y, g, g));

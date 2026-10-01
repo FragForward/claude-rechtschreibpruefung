@@ -3,7 +3,9 @@ $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $quelle = Join-Path $root 'extension'
 $ziel = Join-Path $root 'dist\thunderbird'
-$xpi = Join-Path $root 'dist\rechtschreibpruefung.xpi'
+$version = (Get-Content (Join-Path $quelle 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
+# Version im Namen: Thunderbird haelt die zuletzt installierte Datei manchmal gesperrt.
+$xpi = Join-Path $root "dist\rechtschreibpruefung-$version.xpi"
 
 if (Test-Path $ziel) { Remove-Item -Recurse -Force $ziel }
 New-Item -ItemType Directory -Force $ziel | Out-Null

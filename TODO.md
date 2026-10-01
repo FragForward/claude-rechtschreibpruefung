@@ -9,7 +9,9 @@ Nach dem ersten Test des Prototyps (01.10.2026) priorisieren.
 - [ ] Background als Service Worker: Verbindung zum Host nach dem Aufwachen neu aufbauen.
 
 ## Prüfung
-- [ ] Ein-/Ausschalten je Mail über einen Knopf in der Verfassen-Leiste (`compose_action`).
+- [x] Ein-/Ausschalten je Mail über den Knopf "Claude" in der Verfassen-Leiste.
+- [ ] Ein/Aus auch als Grundeinstellung (für alle neuen Mails).
+- [ ] Assistent: Ergebnis direkt im Fenster weiter verfeinern ("kürzer", "förmlicher").
 - [ ] Sprache automatisch erkennen und anzeigen.
 - [ ] Lange Mails: Absätze bündeln statt Satz für Satz, um das Abo-Kontingent zu schonen.
 - [ ] Anzeige "wird geprüft" (dezent) für Sätze, die gerade bei Claude liegen.

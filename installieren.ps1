@@ -41,4 +41,4 @@ Write-Host "Hilfsprogramm angemeldet: $manifest"
 Write-Host "Gelerntes liegt in:       $daten"
 Write-Host ''
 Write-Host 'Jetzt in Thunderbird: Add-ons und Themes > Zahnrad > Add-on aus Datei installieren >'
-Write-Host "  $(Join-Path $root 'dist\rechtschreibpruefung.xpi')"
+Write-Host "  $((Get-ChildItem (Join-Path $root 'dist\rechtschreibpruefung-*.xpi') | Sort-Object LastWriteTime | Select-Object -Last 1).FullName)"

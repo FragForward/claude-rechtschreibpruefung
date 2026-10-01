@@ -11,11 +11,14 @@ Regeln:
 - "wort" ist ein Ausschnitt exakt so, wie er im SATZ steht (ein Wort oder wenige Wörter). "nr" ist das wievielte Vorkommen dieses Ausschnitts im Satz (meist 1).
 - "vorschlag" ersetzt genau diesen Ausschnitt. "alternativen": höchstens zwei weitere sinnvolle Ersetzungen, sonst leer.
 - Fehlendes Komma: "wort" ist das Wort vor der Stelle, "vorschlag" dasselbe Wort mit Komma.
+- Steht bei einer Nachricht "OHNE SATZZEICHEN AM ENDE" und ist der SATZ ein vollständiger Satz (keine Anrede wie "Hallo Max,", kein Gruß, keine Aufzählung, keine Signatur): melde das fehlende Satzzeichen mit "wort" = letztes Wort des Satzes, "vorschlag" = dasselbe Wort mit Punkt (bzw. Fragezeichen), typ "grammatik".
 - "typ": "rechtschreibung" = Tippfehler, falsche Schreibung, Groß-/Kleinschreibung, zusammengeschriebene Wörter. "grammatik" = Grammatik, Fall, Kongruenz, das/dass, Zeichensetzung. "stil" = deutlich bessere Wortwahl; sparsam einsetzen.
+- Ändere nie die Aussage oder den Inhalt. Was grammatisch korrekt ist, ist kein Fehler, auch wenn man es anders sagen könnte.
 - "erklaerung": höchstens 8 Wörter, auf Deutsch.
 - "eindeutig": true nur, wenn "wort" in keinem Zusammenhang ein korrektes Wort ist (reiner Tippfehler wie "isth" oder "müßen"). Bei "das"/"dass", "seid"/"seit" usw. immer false.
-- "satz_vorschlag": nur wenn der ganze Satz umformuliert klar besser lesbar wäre, sonst leer lassen. "satz_erklaerung": ein kurzer Satz dazu.
-- Nicht anmerken: Eigennamen, Firmen- und Produktnamen, Fachbegriffe, Abkürzungen, Mailadressen, URLs, Code, Grußformeln, Wörter aus dem Wörterbuch unten.
+- "satz_vorschlag": nur wenn der ganze Satz umformuliert klar besser lesbar wäre und dieselbe Aussage behält, sonst leer lassen. Jeder einzelne Fehler muss trotzdem zusätzlich in "fehler" stehen. "satz_erklaerung": ein kurzer Satz dazu.
+- Eigennamen nicht als unbekanntes Wort anmerken, aber falsche Kleinschreibung schon ("alex" -> "Alex", typ "rechtschreibung").
+- Nicht anmerken: Firmen- und Produktnamen in ihrer üblichen Schreibung, Fachbegriffe, Abkürzungen, Mailadressen, URLs, Code, Grußformeln, Wörter aus dem Wörterbuch unten.
 - Ton und Anrede des Schreibers beibehalten (Du/Sie, locker). Nicht förmlicher machen.
 - Englische Sätze auf Englisch prüfen.
 - Keine Fehler: {"fehler":[]}
@@ -29,8 +32,9 @@ function systemPrompt(profil, woerterbuch) {
   return text;
 }
 
-function pruefNachricht(satz, kontext) {
+function pruefNachricht(satz, kontext, offen) {
   let text = 'SATZ: ' + satz;
+  if (offen) text += '\n(OHNE SATZZEICHEN AM ENDE)';
   if (kontext && kontext.trim() !== satz.trim()) text += '\nKONTEXT: ' + kontext;
   return text;
 }
@@ -44,6 +48,9 @@ function auswertungsNachricht(profil, eintraege) {
     if (e.art === 'uebernommen') return `UEBERNOMMEN: ${e.von} -> ${e.nach} (${e.typ})`;
     if (e.art === 'ignoriert') return `IGNORIERT: ${e.von}${e.nach ? ' -> ' + e.nach : ''} (${e.typ})`;
     if (e.art === 'woerterbuch') return `INS WOERTERBUCH: ${e.von}`;
+    if (e.art === 'assistent_uebernommen') return `VOM ASSISTENTEN UEBERARBEITET (${e.typ}) UND UEBERNOMMEN:
+  vorher: ${e.von}
+  nachher: ${e.nach}`;
     return '';
   }).filter(Boolean).join('\n');
 
