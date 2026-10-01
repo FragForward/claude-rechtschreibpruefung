@@ -73,5 +73,22 @@ browser.menus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'rsp-verbessern') rspAssistentOeffnen(tab.id, 'markierung');
 });
 
+// Selbst aktualisieren: neuer Baustand im Projektordner -> Add-on neu laden, aber nie mit offenem Mailfenster.
+let rspEigenerStand = null;
+fetch(browser.runtime.getURL('bau.json')).then(r => r.json()).then(b => { rspEigenerStand = b.stand; }, () => {});
+setInterval(async () => {
+  try {
+    if (!rspEigenerStand) return;
+    const b = await rspAnHost({ art: 'baustand', eigener: rspEigenerStand });
+    if (!b.ok || !b.stand || b.stand === rspEigenerStand) return;
+    const fenster = await browser.windows.getAll();
+    if (fenster.some(w => w.type === 'messageCompose')) return;
+    rspAnHost({ art: 'neu_laden', stand: b.stand });
+    setTimeout(() => browser.runtime.reload(), 300);
+  } catch (e) {
+    rspAnHost({ art: 'neu_laden', fehler: String(e) });
+  }
+}, 30000);
+
 // Beim Start verbinden, damit die Claude-Sitzung schon warm ist, wenn die erste Mail geschrieben wird.
 rspAnHost({ art: 'status' }).then(a => console.log('Rechtschreibprüfung:', a));

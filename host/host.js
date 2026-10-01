@@ -97,6 +97,13 @@ async function bearbeiten(n) {
       return { einstellungen: e };
     }
 
+    case 'baustand':
+      try { return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'dist', 'thunderbird', 'bau.json'), 'utf8')); } catch (e) { return {}; }
+
+    case 'neu_laden':
+      log('Add-on lädt sich neu:', n.stand || n.fehler || '');
+      return {};
+
     case 'assistent_vorwaermen':
       assistentSitzung.vorwaermen();
       return {};
