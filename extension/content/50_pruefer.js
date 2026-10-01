@@ -18,7 +18,7 @@ class RspPruefer {
     this.element = element;
     this.doc = element.ownerDocument;
     this.ebene = rspEbeneFuer(this.doc);
-    this.modell = element.tagName === 'TEXTAREA' ? new RspTextfeldModell(element, this.ebene) : new RspTextModell(element);
+    this.modell = rspIstFeld(element) ? new RspTextfeldModell(element, this.ebene) : new RspTextModell(element);
     this.popup = new RspPopup(this.ebene);
     this.auto = new RspAutokorrektur(this);
     this.cache = new Map();      // Satztext -> { zustand, fehler, satzVorschlag, satzErklaerung }
@@ -105,7 +105,8 @@ class RspPruefer {
     this.statusMelden();
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
     const kontext = rspKontext(text, s);
-    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt, schreibt }).then(a => {
+    const einzeilig = this.element.tagName === 'INPUT'; // Betreff, Titel: kein Satzzeichen am Ende
+    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt && !einzeilig, schreibt, einzeilig }).then(a => {
       if (!a.ok && /invalidated|ungültig/i.test(a.fehler || '')) {
         // Erweiterung wurde neu geladen; dieses Skript ist verwaist, das neue übernimmt.
         this.aktiv = false;

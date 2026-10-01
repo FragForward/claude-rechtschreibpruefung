@@ -35,9 +35,10 @@ function systemPrompt(profil, woerterbuch) {
   return text;
 }
 
-function pruefNachricht(satz, kontext, offen, schreibt) {
+function pruefNachricht(satz, kontext, offen, schreibt, einzeilig) {
   let text = 'SATZ: ' + satz;
   if (offen) text += '\n(OHNE SATZZEICHEN AM ENDE)';
+  if (einzeilig) text += '\n(EINZEILIGES FELD wie Betreff oder Titel: kein Satzzeichen am Ende verlangen, Nomen trotzdem groß)';
   if (schreibt) text += '\n(WIRD NOCH GESCHRIEBEN: kein Satzzeichen am Ende vorschlagen, das letzte Wort kann unvollständig sein und ist dann kein Fehler)';
   if (kontext && kontext.trim() !== satz.trim()) text += '\nKONTEXT: ' + kontext;
   return text;

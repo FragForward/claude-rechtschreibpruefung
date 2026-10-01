@@ -1,5 +1,5 @@
 'use strict';
-// Textmodell für <textarea>: gleiche Schnittstelle wie RspTextModell, Positionen über ein unsichtbares Spiegelelement.
+// Textmodell für <textarea> und einzeilige <input>: gleiche Schnittstelle wie RspTextModell, Positionen über ein unsichtbares Spiegelelement.
 
 const RSP_SPIEGEL_STIL = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontVariant', 'letterSpacing', 'wordSpacing', 'lineHeight',
   'textTransform', 'textIndent', 'tabSize', 'direction', 'textAlign', 'wordBreak', 'paddingTop', 'paddingLeft', 'paddingBottom',
@@ -33,6 +33,12 @@ class RspTextfeldModell {
     m.top = r.top + 'px';
     m.width = r.width + 'px';
     m.height = r.height + 'px';
+    if (f.tagName === 'INPUT') {
+      // Einzeilig: kein Umbruch, Text senkrecht mittig wie im Eingabefeld.
+      m.whiteSpace = 'pre';
+      m.overflowWrap = 'normal';
+      m.lineHeight = Math.max(0, f.clientHeight - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom)) + 'px';
+    }
     if (this.spiegel.textContent !== f.value + '​') this.spiegel.textContent = f.value + '​';
     this.spiegel.scrollTop = f.scrollTop;
     this.spiegel.scrollLeft = f.scrollLeft;
