@@ -37,9 +37,9 @@ function rspPruefbar(el) {
     if (RSP_PERSOENLICH.test((el.autocomplete || '').trim())) return false;
     return !RSP_KEIN_FLIESSTEXT.test([el.name, el.id, el.placeholder, el.getAttribute('aria-label')].join(' '));
   }
-  if (r.height < 30 || r.width < 120) return false;
-  if (el.tagName === 'TEXTAREA') return !el.readOnly && !el.disabled;
-  return el.isContentEditable;
+  if (el.tagName === 'TEXTAREA') return !el.readOnly && !el.disabled && r.height >= 30 && r.width >= 120;
+  // Einzeilige Editoren wie das WhatsApp-Eingabefeld sind nur gut 20 Pixel hoch.
+  return el.isContentEditable && r.height >= 18 && r.width >= 120;
 }
 
 (function rspStart() {
