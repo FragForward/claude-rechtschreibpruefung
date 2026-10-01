@@ -91,7 +91,7 @@ class Lernen {
   }
 
   /** Wandelt Claudes Antwort in eine bereinigte Fehlerliste. */
-  antwortAuswerten(roh, satz) {
+  antwortAuswerten(roh, satz, schreibt) {
     let daten = { fehler: [] };
     const a = roh.indexOf('{'), b = roh.lastIndexOf('}');
     if (a >= 0 && b > a) {
@@ -113,7 +113,7 @@ class Lernen {
     }));
     const sv = typeof daten.satz_vorschlag === 'string' ? daten.satz_vorschlag.trim() : '';
     return {
-      fehler: zusammenfassen(fehler),
+      fehler: satzendePruefen(zusammenfassen(fehler), satz, schreibt),
       satz_vorschlag: sv && sv !== satz.trim() ? sv : '',
       satz_erklaerung: typeof daten.satz_erklaerung === 'string' ? daten.satz_erklaerung : '',
     };
@@ -147,6 +147,21 @@ class Lernen {
     }
     return { autokorrektur: auto, neuAutomatisch, anzahl: z.anzahl };
   }
+}
+
+/**
+ * Satzzeichen am Satzende nur am wirklich letzten Wort und nie, solange die Zeile noch geschrieben wird
+ * (Rückmeldung 01.10.2026: "ferig" wurde zu "fertig.", obwohl "sein" folgte).
+ */
+function satzendePruefen(fehler, satz, schreibt) {
+  const ohneEnde = satz.replace(/[\s"'»«“”)\]]+$/, '');
+  return fehler.map(f => {
+    const m = /^([\s\S]*?)([.!?]+)$/.exec(f.vorschlag);
+    if (!m || f.wort.endsWith(m[2])) return f;
+    const amEnde = ohneEnde.endsWith(f.wort) && ohneEnde.lastIndexOf(f.wort) === ohneEnde.length - f.wort.length;
+    if (amEnde && !schreibt) return f;
+    return { ...f, vorschlag: m[1] };
+  }).filter(f => f.vorschlag !== f.wort);
 }
 
 /** Zwei Befunde für dieselbe Stelle zu einem machen, z. B. "alex" -> "Alex" und "alex" -> "alex." ergibt "Alex.". */

@@ -76,34 +76,39 @@ class RspPruefer {
     this.saetze = rspSaetze(text);
     let nachholen = 0;
     for (const s of this.saetze) {
-      if (this.cache.has(s.text) || s.text.length < 4) continue;
-      let fertig = this.alleFertig || c < s.start || c > s.ende;
+      if (s.text.length < 4) continue;
+      const drin = !this.alleFertig && c >= s.start && c <= s.ende;
+      // Offene Zeile, in der noch geschrieben wird: eigener Eintrag ohne Satzende-Prüfung.
+      const schreibt = drin && !s.abgeschlossen;
+      if (this.cache.has(s.text) || (schreibt && this.cache.has(s.text + RSP_SCHREIBT))) continue;
+      let fertig = !drin;
       if (!fertig) {
         const pause = s.abgeschlossen ? RSP_PAUSE_MS : (s.text.split(/\s+/).length >= 3 ? RSP_PAUSE_OFFEN_MS : 0);
         if (pause && jetzt - this.zuletztGetippt >= pause) fertig = true;
         else if (pause) nachholen = Math.min(nachholen || Infinity, pause - (jetzt - this.zuletztGetippt));
       }
-      if (fertig) this.anfragen(s, text);
+      if (fertig) this.anfragen(s, text, schreibt);
     }
     this.alleFertig = false;
     if (nachholen) this.planen(nachholen + 50);
     this.zeichnen();
   }
 
-  anfragen(s, text) {
+  anfragen(s, text, schreibt) {
     const eintrag = { zustand: 'wartet' };
-    this.cache.set(s.text, eintrag);
+    const schluessel = s.text + (schreibt ? RSP_SCHREIBT : '');
+    this.cache.set(schluessel, eintrag);
     this.statusMelden();
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
     const kontext = rspKontext(text, s);
-    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen }).then(a => {
+    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt, schreibt }).then(a => {
       if (!a.ok) {
         eintrag.zustand = 'fehler';
         if (Date.now() - this.letzterFehler > 60000) {
           this.letzterFehler = Date.now();
           this.ebene.hinweis('Rechtschreibprüfung: ' + (a.fehler || 'Hilfsprogramm nicht erreichbar'), 6000);
         }
-        setTimeout(() => { if (this.cache.get(s.text) === eintrag) this.cache.delete(s.text); }, 30000);
+        setTimeout(() => { if (this.cache.get(schluessel) === eintrag) this.cache.delete(schluessel); }, 30000);
         this.zeichnenBald();
         return;
       }
@@ -123,8 +128,8 @@ class RspPruefer {
     const eintraege = [];
     let befunde = 0;
     for (const s of this.saetze) {
-      const e = this.cache.get(s.text);
-      if (!e || e.zustand !== 'fertig') continue;
+      const e = this.eintrag(s.text);
+      if (!e) continue;
       const sichtbare = this.offeneFehler(s.text, e);
       for (const f of sichtbare) {
         const pos = rspWortFinden(s.text, f.wort, f.nr);
@@ -225,11 +230,11 @@ class RspPruefer {
       this.modell.cursorSetzen(cursor > bis ? cursor + neu.length - (bis - von) : cursor);
     }
     // Restliche Befunde für den geänderten Satz übernehmen, statt ihn neu prüfen zu lassen.
-    const alt = this.cache.get(d.satz);
+    const alt = this.eintrag(d.satz);
     const neuerSatz = s.text.slice(0, pos) + neu + s.text.slice(pos + f.wort.length);
-    if (alt && !this.cache.has(neuerSatz)) {
+    if (alt) {
       const rest = alt.fehler.filter(x => x !== f).map(x => (x.wort === f.wort && x.nr > f.nr ? { ...x, nr: x.nr - 1 } : x));
-      this.cache.set(neuerSatz, { zustand: 'fertig', fehler: rest, satzVorschlag: '', satzErklaerung: '' });
+      this.uebertragen(d.satz, neuerSatz, rest);
     }
     rspSenden({ art: 'aktion', aktion: 'uebernommen', von: f.wort, nach: neu, typ: f.typ, eindeutig: f.eindeutig }).then(a => {
       if (a.autokorrektur) this.auto.setzen(a.autokorrektur);

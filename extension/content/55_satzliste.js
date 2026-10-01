@@ -1,7 +1,24 @@
 'use strict';
 // Satzliste (Zähler hinter dem Satz), Leerzeichen-Popup und Status für den Claude-Knopf.
 
+const RSP_SCHREIBT = '\u0000schreibt';
+
 Object.assign(RspPruefer.prototype, {
+  /** Fertiges Prüfergebnis eines Satzes; bis die Satzende-Prüfung da ist, gilt das aus der Schreibphase. */
+  eintrag(satz) {
+    const voll = this.cache.get(satz);
+    if (voll && voll.zustand === 'fertig') return voll;
+    const vorlaeufig = this.cache.get(satz + RSP_SCHREIBT);
+    return vorlaeufig && vorlaeufig.zustand === 'fertig' ? vorlaeufig : null;
+  },
+
+  /** Restbefunde auf den geänderten Satz übertragen, unter demselben Schlüsseltyp wie bisher. */
+  uebertragen(altSatz, neuerSatz, rest) {
+    const voll = this.cache.get(altSatz);
+    const schluessel = neuerSatz + (voll && voll.zustand === 'fertig' ? '' : RSP_SCHREIBT);
+    if (!this.cache.has(schluessel)) this.cache.set(schluessel, { zustand: 'fertig', fehler: rest, satzVorschlag: '', satzErklaerung: '' });
+  },
+
   /** Befunde eines Satzes, die weder ignoriert noch im Text unauffindbar sind. */
   offeneFehler(satz, e) {
     return e.fehler.filter(f => !this.ignoriert.has(satz + '|' + f.wort + '|' + f.nr) && rspWortFinden(satz, f.wort, f.nr) >= 0);
@@ -30,7 +47,8 @@ Object.assign(RspPruefer.prototype, {
   /** Wendet die gewählten Vorschläge von hinten nach vorn an, damit die Positionen davor gültig bleiben. */
   auswahlAnwenden(satzText, auswahl) {
     if (!auswahl.length) return;
-    const e = this.cache.get(satzText);
+    const e = this.eintrag(satzText);
+    if (!e) return;
     if (auswahl.some(z => z.satz)) { this.satzErsetzen({ satz: satzText, eintrag: e }); return; }
     const s = this.satzFinden(satzText);
     if (!s) return;
@@ -47,7 +65,7 @@ Object.assign(RspPruefer.prototype, {
       erledigt.push(f);
     }
     const rest = e.fehler.filter(f => !erledigt.includes(f));
-    if (!this.cache.has(neuerSatz)) this.cache.set(neuerSatz, { zustand: 'fertig', fehler: rest, satzVorschlag: '', satzErklaerung: '' });
+    this.uebertragen(satzText, neuerSatz, rest);
     for (const f of erledigt) {
       rspSenden({ art: 'aktion', aktion: 'uebernommen', von: f.wort, nach: f.vorschlag, typ: f.typ, eindeutig: f.eindeutig }).then(a => {
         if (a.autokorrektur) this.auto.setzen(a.autokorrektur);
