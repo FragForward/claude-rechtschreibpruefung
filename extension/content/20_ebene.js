@@ -36,7 +36,12 @@ const RSP_CSS = `
 .vergleich-kurz del { color: #cf222e; text-decoration: line-through; } .vergleich-kurz ins { color: #1a7f37; text-decoration: none; font-weight: 600; }
 .vorschau-titel { margin-top: 8px; font-size: 11.5px; font-weight: 600; color: #57606a; }
 .vorschau { margin-top: 4px; padding: 8px 10px; background: #f6f8fa; border-radius: 6px; line-height: 1.55; }
-.vorschau .neu { border-bottom: 2px solid; border-radius: 1px; padding: 0 1px; }
+.vorschau .neu { border-bottom: 2px solid; border-radius: 1px; padding: 0 1px; cursor: pointer; }
+.vorschau .neu:hover { outline: 1px solid rgba(0,0,0,.25); }
+.vorschau .neu.aus { border-bottom: 1px dashed #8c959f; background: none; color: #57606a; }
+.knoepfe.steuerung { margin-top: 6px; padding-top: 6px; border-top: 1px solid #eef1f4; }
+.knoepfe.steuerung button { font-size: 12px; padding: 4px 9px; background: none; color: #57606a; }
+.knoepfe.steuerung button:hover { background: #eef1f4; }
 .vorschau .neu.rechtschreibung { border-color: #e5484d; background: rgba(229, 72, 77, .12); }
 .vorschau .neu.grammatik { border-color: #f0a020; background: rgba(240, 160, 32, .16); }
 .vorschau .neu.stil { border-color: #3e8ef7; background: rgba(62, 142, 247, .12); }
