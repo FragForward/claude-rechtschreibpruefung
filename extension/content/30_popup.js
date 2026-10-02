@@ -61,6 +61,24 @@ class RspPopup {
       body.appendChild(zeile);
     }
     const auswahl = () => (inhalt.liste || []).filter((z, i) => haken[i].checked);
+    // Vorschau des korrigierten Satzes unter der Liste; folgt den Haken (Wunsch 02.10.2026).
+    if (inhalt.vorschau) {
+      const titel = doc.createElement('div');
+      titel.className = 'vorschau-titel';
+      titel.textContent = 'So wird der Satz:';
+      const box = doc.createElement('div');
+      box.className = 'vorschau';
+      const zeigen = () => box.replaceChildren(...inhalt.vorschau(auswahl()).map(t => {
+        if (!t.typ) return doc.createTextNode(t.text);
+        const s = doc.createElement('span');
+        s.className = 'neu ' + t.typ;
+        s.textContent = t.text;
+        return s;
+      }));
+      for (const cb of haken) cb.addEventListener('change', zeigen);
+      zeigen();
+      body.append(titel, box);
+    }
     const knoepfe = doc.createElement('div');
     knoepfe.className = 'knoepfe';
     for (const k of inhalt.knoepfe) {
@@ -77,10 +95,14 @@ class RspPopup {
     this.ebene.oben.appendChild(el);
     this.el = el;
 
-    const w = doc.defaultView, b = el.getBoundingClientRect();
+    // Unter dem Anker, sonst darüber; passt beides nicht, ins Fenster schieben und notfalls scrollen.
+    const w = doc.defaultView;
+    el.style.maxHeight = (w.innerHeight - 16) + 'px';
+    el.style.overflowY = 'auto';
+    const b = el.getBoundingClientRect();
     let x = Math.min(Math.max(8, anker.left), w.innerWidth - b.width - 8);
     let y = anker.bottom + 6;
-    if (y + b.height > w.innerHeight - 8 && anker.top - b.height - 6 > 8) y = anker.top - b.height - 6;
+    if (y + b.height > w.innerHeight - 8) y = anker.top - b.height - 6 > 8 ? anker.top - b.height - 6 : Math.max(8, w.innerHeight - b.height - 8);
     el.style.left = x + 'px';
     el.style.top = y + 'px';
   }

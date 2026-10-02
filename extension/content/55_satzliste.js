@@ -3,6 +3,23 @@
 
 const RSP_SCHREIBT = '\u0000schreibt';
 
+/** Korrigierter Satz als Teile [{text, typ?}]; geänderte Stellen tragen ihren Fehlertyp für die Farbe. */
+function rspSatzVorschau(satz, satzVorschlag, auswahl) {
+  if (auswahl.some(z => z.satz)) return [{ text: satzVorschlag, typ: 'stil' }];
+  const stellen = auswahl.map(z => ({ f: z.fehler, pos: rspWortFinden(satz, z.fehler.wort, z.fehler.nr) }))
+    .filter(x => x.pos >= 0).sort((a, b) => a.pos - b.pos);
+  const teile = [];
+  let bis = 0;
+  for (const { f, pos } of stellen) {
+    if (pos < bis) continue; // überlappt mit der vorigen Stelle
+    if (pos > bis) teile.push({ text: satz.slice(bis, pos) });
+    teile.push({ text: f.vorschlag, typ: f.typ });
+    bis = pos + f.wort.length;
+  }
+  if (bis < satz.length) teile.push({ text: satz.slice(bis) });
+  return teile;
+}
+
 Object.assign(RspPruefer.prototype, {
   /** Fertiges Prüfergebnis eines Satzes; bis die Satzende-Prüfung da ist, gilt das aus der Schreibphase. */
   eintrag(satz) {
@@ -35,6 +52,7 @@ Object.assign(RspPruefer.prototype, {
       typ: liste[0] ? liste[0].typ : 'stil',
       erklaerung: liste.length > 1 ? liste.length + ' Vorschläge in diesem Satz' : '',
       liste,
+      vorschau: auswahl => rspSatzVorschau(d.satz, e.satzVorschlag, auswahl),
       knoepfe: [
         { text: 'Ausgewählte übernehmen', primaer: true, aktion: a => this.auswahlAnwenden(d.satz, a) },
         { text: 'Alle ignorieren', aktion: () => {

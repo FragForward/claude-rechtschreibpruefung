@@ -34,6 +34,12 @@ const RSP_CSS = `
 .zeile .punkt { margin-top: 5px; flex: none; }
 .zeilentext small { display: block; color: #57606a; font-size: 11.5px; }
 .vergleich-kurz del { color: #cf222e; text-decoration: line-through; } .vergleich-kurz ins { color: #1a7f37; text-decoration: none; font-weight: 600; }
+.vorschau-titel { margin-top: 8px; font-size: 11.5px; font-weight: 600; color: #57606a; }
+.vorschau { margin-top: 4px; padding: 8px 10px; background: #f6f8fa; border-radius: 6px; line-height: 1.55; }
+.vorschau .neu { border-bottom: 2px solid; border-radius: 1px; padding: 0 1px; }
+.vorschau .neu.rechtschreibung { border-color: #e5484d; background: rgba(229, 72, 77, .12); }
+.vorschau .neu.grammatik { border-color: #f0a020; background: rgba(240, 160, 32, .16); }
+.vorschau .neu.stil { border-color: #3e8ef7; background: rgba(62, 142, 247, .12); }
 .knoepfe { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
 .knoepfe button { font: inherit; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; background: #eef1f4; color: #1f2328; }
 .knoepfe button:hover { background: #e2e6ea; }
