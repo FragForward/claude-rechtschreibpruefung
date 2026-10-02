@@ -19,7 +19,7 @@ const RSP_CSS = `
 .knopf.rechtschreibung { background: #e5484d; }
 .knopf.grammatik { background: #f0a020; }
 .knopf.stil { background: #3e8ef7; }
-.popup { position: fixed; pointer-events: auto; width: 320px; max-width: calc(100vw - 16px); background: #fff; color: #1f2328;
+.popup { position: fixed; pointer-events: auto; width: 340px; max-width: calc(100vw - 16px); background: #fff; color: #1f2328;
   border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.06); font: 13px/1.4 system-ui, "Segoe UI", sans-serif; overflow: hidden; }
 .kopf { display: flex; align-items: center; gap: 8px; padding: 9px 12px 7px; font-weight: 600; font-size: 12px; color: #57606a; }
 .punkt { width: 8px; height: 8px; border-radius: 50%; }
@@ -39,9 +39,11 @@ const RSP_CSS = `
 .vorschau .neu { border-bottom: 2px solid; border-radius: 1px; padding: 0 1px; cursor: pointer; }
 .vorschau .neu:hover { outline: 1px solid rgba(0,0,0,.25); }
 .vorschau .neu.aus { border-bottom: 1px dashed #8c959f; background: none; color: #57606a; }
-.knoepfe.steuerung { margin-top: 6px; padding-top: 6px; border-top: 1px solid #eef1f4; }
-.knoepfe.steuerung button { font-size: 12px; padding: 4px 9px; background: none; color: #57606a; }
-.knoepfe.steuerung button:hover { background: #eef1f4; }
+/* Steuerknöpfe: eine Reihe nebeneinander, als Knöpfe mit dünnem Rahmen (Wunsch 02.10.2026) */
+.knoepfe.steuerung { margin-top: 8px; padding-top: 8px; border-top: 1px solid #eef1f4; flex-wrap: nowrap; gap: 5px; }
+.knoepfe.steuerung button { flex: 1 1 auto; white-space: nowrap; font-size: 11.5px; padding: 4px 6px;
+  background: #fff; color: #424a53; border: 1px solid #d0d7de; border-radius: 6px; }
+.knoepfe.steuerung button:hover { background: #f3f4f6; border-color: #b6bec7; }
 .vorschau .neu.rechtschreibung { border-color: #e5484d; background: rgba(229, 72, 77, .12); }
 .vorschau .neu.grammatik { border-color: #f0a020; background: rgba(240, 160, 32, .16); }
 .vorschau .neu.stil { border-color: #3e8ef7; background: rgba(62, 142, 247, .12); }
