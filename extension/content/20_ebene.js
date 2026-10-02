@@ -9,6 +9,12 @@ const RSP_CSS = `
 .wort.grammatik { border-color: #f0a020; background: rgba(240, 160, 32, .14); }
 .wort.stil { border-color: #3e8ef7; background: rgba(62, 142, 247, .10); }
 .wort.blitz { border: none; background: rgba(46, 160, 67, .30); border-radius: 3px; }
+/* Satz liegt gerade bei Claude: wandernde Zickzack-Welle, nur aus Verläufen (keine Bilder, wegen Altus-CSP) */
+.wort.laeuft { border: none; opacity: .75;
+  background: linear-gradient(135deg, transparent 35%, #2f81f7 35%, #2f81f7 60%, transparent 60%) 0 100% / 6px 4px repeat-x,
+              linear-gradient(45deg, transparent 35%, #2f81f7 35%, #2f81f7 60%, transparent 60%) 0 100% / 6px 4px repeat-x;
+  animation: rsp-welle .7s linear infinite; }
+@keyframes rsp-welle { to { background-position: 6px 100%, 6px 100%; } }
 .knopf { border-radius: 7px; color: #fff; font: 700 10px/14px system-ui, "Segoe UI", sans-serif; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,.35); }
 .knopf.rechtschreibung { background: #e5484d; }
 .knopf.grammatik { background: #f0a020; }

@@ -103,6 +103,7 @@ class RspPruefer {
     const schluessel = s.text + (schreibt ? RSP_SCHREIBT : '');
     this.cache.set(schluessel, eintrag);
     this.statusMelden();
+    this.zeichnenBald(); // Welle unter dem Satz, solange Claude prüft
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
     const kontext = rspKontext(text, s);
     const einzeilig = this.element.tagName === 'INPUT'; // Betreff, Titel: kein Satzzeichen am Ende
@@ -139,6 +140,8 @@ class RspPruefer {
     const eintraege = [];
     let befunde = 0;
     for (const s of this.saetze) {
+      const offen = [this.cache.get(s.text), this.cache.get(s.text + RSP_SCHREIBT)];
+      if (offen.some(x => x && x.zustand === 'wartet')) eintraege.push({ art: 'wort', typ: 'laeuft', rechtecke: this.modell.rechtecke(s.start, s.ende) });
       const e = this.eintrag(s.text);
       if (!e) continue;
       const sichtbare = this.offeneFehler(s.text, e);

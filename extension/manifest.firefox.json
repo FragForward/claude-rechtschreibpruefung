@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Rechtschreibprüfung (Claude)",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Rechtschreib- und Grammatikprüfung beim Verfassen, Korrektur durch Claude über das eigene Abo. Lernt den eigenen Schreibstil.",
   "browser_specific_settings": {
     "gecko": {

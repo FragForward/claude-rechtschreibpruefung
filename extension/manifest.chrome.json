@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rechtschreibprüfung (Claude)",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Rechtschreib- und Grammatikprüfung beim Verfassen, Korrektur durch Claude über das eigene Abo. Lernt den eigenen Schreibstil.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvQpGjeVAjHDHBw8mXwko8BLW4UCDkjvl/30iFIfC6IYLGrPmQFNy7LQpq98KELFC1PabFY5IbJwMpJRUBGsQi5DgKD7fOBx/KoGxlj2yILhnEfEOaMZ5FjrnclVq0A/pitNDzDkVljGUZDz+cwQa+YzB0IY6iTnP8n6mD+j586aBf32wkDds0tumMzBo1rRIuguJwmpkhPNqDjDfUxiKbr09A/p2cbUbhHUGLeaTiN8qdzNsatNZKygUdYUTJ+/aSVBOh/uJOO94ijXvD2emjtxOtGhBbr+ALuvRq5O+fnYBiT4dNS01VGhT9CtAjELS3VFCyQ3YLz3AbNMCeYIKmQIDAQAB",
   "icons": {

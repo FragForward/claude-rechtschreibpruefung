@@ -15,7 +15,7 @@ Nach dem ersten Test des Prototyps (01.10.2026) priorisieren.
 - [ ] Assistent: Ergebnis direkt im Fenster weiter verfeinern ("kürzer", "förmlicher").
 - [ ] Sprache automatisch erkennen und anzeigen.
 - [ ] Lange Mails: Absätze bündeln statt Satz für Satz, um das Abo-Kontingent zu schonen.
-- [ ] Anzeige "wird geprüft" (dezent) für Sätze, die gerade bei Claude liegen.
+- [x] Anzeige "wird geprüft": wandernde blaue Welle unter Sätzen, die gerade bei Claude liegen.
 
 ## Lernen
 - [ ] Profil-Archiv aufräumen (z. B. nur die letzten 30 Fassungen behalten).
