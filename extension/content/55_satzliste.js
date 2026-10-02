@@ -44,7 +44,10 @@ Object.assign(RspPruefer.prototype, {
     });
   },
 
-  /** Wendet die gewählten Vorschläge von hinten nach vorn an, damit die Positionen davor gültig bleiben. */
+  /**
+   * Wendet die gewählten Vorschläge als EINEN Austausch vom ersten bis zum letzten geänderten Wort an.
+   * Mehrere Austausche hintereinander scheitern in WhatsApp (Lexical baut den Text dazwischen neu auf; 02.10.2026).
+   */
   async auswahlAnwenden(satzText, auswahl) {
     if (!auswahl.length) return;
     const e = this.eintrag(satzText);
@@ -54,7 +57,7 @@ Object.assign(RspPruefer.prototype, {
     if (!s) return;
     const stellen = auswahl.map(z => ({ f: z.fehler, pos: rspWortFinden(s.text, z.fehler.wort, z.fehler.nr) }))
       .filter(x => x.pos >= 0).sort((a, b) => b.pos - a.pos);
-    // Erst planen und den neuen Satz vormerken, damit er während der (in WhatsApp verzögerten) Ersetzungen nicht neu geprüft wird.
+    // Von hinten nach vorn in den Satz einrechnen, damit die Positionen davor gültig bleiben.
     let neuerSatz = s.text, grenze = Infinity;
     const plan = [];
     for (const x of stellen) {
@@ -63,13 +66,13 @@ Object.assign(RspPruefer.prototype, {
       grenze = x.pos;
       plan.push(x);
     }
+    if (!plan.length) return;
+    // Vormerken, damit der geänderte Satz nicht neu geprüft wird.
     this.uebertragen(satzText, neuerSatz, e.fehler.filter(f => !plan.some(x => x.f === f)));
-    const erledigt = [];
-    for (const { f, pos } of plan) {
-      if (!(await this.modell.ersetzen(s.start + pos, s.start + pos + f.wort.length, f.vorschlag))) continue;
-      this.modell.aufbauen();
-      erledigt.push(f);
-    }
+    const von = Math.min(...plan.map(x => x.pos));
+    const bis = Math.max(...plan.map(x => x.pos + x.f.wort.length));
+    const ersatz = neuerSatz.slice(von, bis + neuerSatz.length - s.text.length);
+    const erledigt = (await this.modell.ersetzen(s.start + von, s.start + bis, ersatz)) ? plan.map(x => x.f) : [];
     for (const f of erledigt) {
       rspSenden({ art: 'aktion', aktion: 'uebernommen', von: f.wort, nach: f.vorschlag, typ: f.typ, eindeutig: f.eindeutig }).then(a => {
         if (a.autokorrektur) this.auto.setzen(a.autokorrektur);
