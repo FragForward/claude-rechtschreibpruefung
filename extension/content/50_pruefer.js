@@ -212,10 +212,10 @@ class RspPruefer {
   wortPopup(d, anker) {
     const f = d.fehler;
     const knoepfe = [f.vorschlag, ...(f.alternativen || [])].map((v, i) => ({ text: v || '(entfernen)', primaer: i === 0, aktion: () => this.wortErsetzen(d, v) }));
-    knoepfe.push({ text: 'Ignorieren', aktion: () => this.ignorieren(d.satz + '|' + f.wort + '|' + f.nr, f) });
+    knoepfe.push({ text: 'Ignorieren', reihe: 2, aktion: () => this.ignorieren(d.satz + '|' + f.wort + '|' + f.nr, f) });
     if (f.typ === 'rechtschreibung') {
-      knoepfe.push({ text: 'Ins Wörterbuch', aktion: () => this.insWoerterbuch(f.wort) });
-      if (/^[\p{L}\p{N}]+$/u.test(f.wort)) knoepfe.push({ text: 'Immer automatisch', aktion: () => this.immerAutomatisch(d, f) });
+      knoepfe.push({ text: 'Ins Wörterbuch', reihe: 2, aktion: () => this.insWoerterbuch(f.wort) });
+      if (/^[\p{L}\p{N}]+$/u.test(f.wort)) knoepfe.push({ text: 'Immer automatisch', reihe: 2, aktion: () => this.immerAutomatisch(d, f) });
     }
     this.popup.zeigen(anker, { typ: f.typ, erklaerung: f.erklaerung, knoepfe });
   }

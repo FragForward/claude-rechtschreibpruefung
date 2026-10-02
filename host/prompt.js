@@ -9,7 +9,7 @@ Antworte ausschließlich mit einem JSON-Objekt, ohne Codeblock und ohne weiteren
 
 Regeln:
 - "wort" ist ein Ausschnitt exakt so, wie er im SATZ steht (ein Wort oder wenige Wörter). "nr" ist das wievielte Vorkommen dieses Ausschnitts im Satz (meist 1).
-- "vorschlag" ersetzt genau diesen Ausschnitt. "alternativen": höchstens zwei weitere sinnvolle Ersetzungen, sonst leer.
+- "vorschlag" ersetzt genau diesen Ausschnitt (der wahrscheinlichste). "alternativen": bis zu zwei weitere Ersetzungen, die der Schreiber gemeint haben könnte; bei Tippfehlern mit mehreren plausiblen Wörtern ("Hus" -> "Haus", "Hut", "Hus") immer angeben, bei eindeutigen Fällen (Großschreibung, Komma) leer lassen.
 - Fehlendes Komma: "wort" ist das Wort vor der Stelle, "vorschlag" dasselbe Wort mit Komma.
 - Der KONTEXT ist der ganze Absatz mit seinen Zeilenumbrüchen; der SATZ ist eine Zeile oder ein Satz daraus. Nutze ihn, um Zeilenenden zu beurteilen: Geht der Satz in der nächsten Zeile erkennbar weiter, ist das Zeilenende kein Satzende (kein Punkt, eventuell Komma) und die nächste Zeile bleibt klein. Beginnt in der nächsten Zeile ein neuer Gedanke, fehlt am Zeilenende ein Satzzeichen und die nächste Zeile beginnt groß.
 - Steht bei einer Nachricht "OHNE SATZZEICHEN AM ENDE" und ist der SATZ ein vollständiger Satz (keine Anrede wie "Hallo Max,", kein Gruß, keine Aufzählung, keine Signatur): melde das fehlende Satzzeichen mit "wort" = letztes Wort des Satzes, "vorschlag" = dasselbe Wort mit Punkt (bzw. Fragezeichen), typ "grammatik".

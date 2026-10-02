@@ -41,54 +41,69 @@ class RspPopup {
       body.appendChild(p);
     }
     if (inhalt.vergleich) body.appendChild(rspVergleich(doc, inhalt.vergleich.alt, inhalt.vergleich.neu));
-    // Auswahlliste: je Vorschlag eine Zeile mit Haken; Knöpfe bekommen die gewählten Einträge.
-    const haken = [];
-    for (const z of inhalt.liste || []) {
+    // Auswahlliste: je Vorschlag eine Zeile mit Haken. Jeder Eintrag merkt sich an/aus und die gewählte
+    // Variante (z.optionen[z.wahl]); Haken, Zeilentext und Vorschau werden daraus gezeichnet.
+    const liste = inhalt.liste || [];
+    const zeilen = liste.map(z => {
+      z.an = z.an !== false;
+      z.wahl = z.wahl || 0;
       const zeile = doc.createElement('label');
       zeile.className = 'zeile';
       const cb = doc.createElement('input');
       cb.type = 'checkbox';
-      cb.checked = z.an !== false;
-      haken.push(cb);
       const punkt = doc.createElement('span');
       punkt.className = 'punkt ' + z.typ;
       const text = doc.createElement('span');
       text.className = 'zeilentext';
-      if (z.vergleich) text.appendChild(rspVergleich(doc, z.vergleich.alt, z.vergleich.neu, true));
-      else text.textContent = z.text;
-      if (z.erklaerung) { const e = doc.createElement('small'); e.textContent = z.erklaerung; text.appendChild(e); }
       zeile.append(cb, punkt, text);
       body.appendChild(zeile);
-    }
-    const auswahl = () => (inhalt.liste || []).filter((z, i) => haken[i].checked);
-    // Vorschau des korrigierten Satzes unter der Liste; folgt den Haken (Wunsch 02.10.2026).
-    if (inhalt.vorschau) {
-      const titel = doc.createElement('div');
-      titel.className = 'vorschau-titel';
-      titel.textContent = 'So wird der Satz:';
-      const box = doc.createElement('div');
-      box.className = 'vorschau';
-      const zeigen = () => box.replaceChildren(...inhalt.vorschau(auswahl()).map(t => {
+      cb.addEventListener('change', () => { z.an = cb.checked; z.wahl = 0; auffrischen(); });
+      return { z, cb, text };
+    });
+    const auswahl = () => liste.filter(z => z.an);
+    let vorschauBox = null;
+    const auffrischen = () => {
+      for (const { z, cb, text } of zeilen) {
+        cb.checked = z.an;
+        text.replaceChildren();
+        if (z.optionen) text.appendChild(rspVergleich(doc, z.alt, z.optionen[z.wahl], true));
+        else text.textContent = z.text;
+        if (z.erklaerung) { const e = doc.createElement('small'); e.textContent = z.erklaerung; text.appendChild(e); }
+      }
+      if (vorschauBox) vorschauBox.replaceChildren(...inhalt.vorschau(liste).map(t => {
         if (!t.typ) return doc.createTextNode(t.text);
         const s = doc.createElement('span');
         s.className = 'neu ' + t.typ;
         s.textContent = t.text;
+        if (t.eintrag) {
+          s.title = 'Klick: nächster Vorschlag, danach aus, danach wieder an';
+          s.addEventListener('click', () => { rspWeiterschalten(t.eintrag); auffrischen(); });
+        }
         return s;
       }));
-      for (const cb of haken) cb.addEventListener('change', zeigen);
-      zeigen();
-      body.append(titel, box);
+    };
+    // Vorschau des korrigierten Satzes; Klick auf ein markiertes Wort schaltet weiter (Wunsch 02.10.2026).
+    if (inhalt.vorschau) {
+      const titel = doc.createElement('div');
+      titel.className = 'vorschau-titel';
+      titel.textContent = 'So wird der Satz (Klick auf ein markiertes Wort: nächster Vorschlag oder aus):';
+      vorschauBox = doc.createElement('div');
+      vorschauBox.className = 'vorschau';
+      body.append(titel, vorschauBox);
     }
-    const knoepfe = doc.createElement('div');
-    knoepfe.className = 'knoepfe';
+    auffrischen();
+    // Knöpfe in Reihen: Reihe 1 Vorschläge, Reihe 2 Steuerung (Ignorieren, Wörterbuch, ...).
+    const reihen = new Map();
     for (const k of inhalt.knoepfe) {
+      const nr = k.reihe || 1;
+      if (!reihen.has(nr)) { const r = doc.createElement('div'); r.className = 'knoepfe' + (nr > 1 ? ' steuerung' : ''); reihen.set(nr, r); }
       const b = doc.createElement('button');
       b.textContent = k.text;
       if (k.primaer) b.className = 'primaer';
       b.addEventListener('click', () => { const a = auswahl(); this.schliessen(); k.aktion(a); });
-      knoepfe.appendChild(b);
+      reihen.get(nr).appendChild(b);
     }
-    body.appendChild(knoepfe);
+    for (const nr of [...reihen.keys()].sort()) body.appendChild(reihen.get(nr));
     el.append(kopf, body);
     // Fokus bleibt im Editor, sonst landet die Ersetzung nicht im Text.
     el.addEventListener('mousedown', ev => ev.preventDefault());
@@ -110,6 +125,17 @@ class RspPopup {
   schliessen() {
     if (this.el) { this.el.remove(); this.el = null; }
   }
+}
+
+/** Ein Eintrag der Satzliste: nächste Variante, nach der letzten aus, aus wieder an mit der ersten. */
+function rspWeiterschalten(z) {
+  const anzahl = z.optionen ? z.optionen.length : 1;
+  if (!z.an) { z.an = true; z.wahl = 0; } else if (z.wahl < anzahl - 1) z.wahl++; else z.an = false;
+}
+
+/** Gewählter Ersatz eines Listeneintrags (Variante oder Hauptvorschlag). */
+function rspErsatz(z) {
+  return z.optionen ? z.optionen[z.wahl || 0] : z.fehler.vorschlag;
 }
 
 /** Wortweiser Vergleich alt/neu: gestrichen rot, neu grün. */
