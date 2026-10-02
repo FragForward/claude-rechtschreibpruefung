@@ -80,9 +80,14 @@ rspHoeren((n, sender) => {
 // Selbst aktualisieren: neuer Baustand im Projektordner -> neu laden, sobald die Plattform es erlaubt.
 let rspEigenerStand = null;
 fetch(browser.runtime.getURL('bau.json')).then(r => r.json()).then(b => { rspEigenerStand = b.stand; }, () => {});
+// Signierte Installationen (Firefox) ändern sich beim Neuladen nicht; dort nie neu laden, sonst Endlosschleife.
+let rspAusOrdner = true;
+if (RSP_WEB && browser.management && browser.management.getSelf) {
+  browser.management.getSelf().then(i => { rspAusOrdner = i.installType === 'development'; }, () => {});
+}
 setInterval(async () => {
   try {
-    if (!rspEigenerStand) return;
+    if (!rspEigenerStand || !rspAusOrdner) return;
     const b = await rspAnHost({ art: 'baustand' });
     if (!b.ok || !b.stand || b.stand === rspEigenerStand) return;
     if (!(await rspDarfNeuLaden())) return;
