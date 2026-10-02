@@ -1,6 +1,10 @@
 # Rechtschreibprüfung (Claude)
 
-Rechtschreib- und Grammatikprüfung für **Thunderbird, Chrome und Firefox**. Erkennt fertige Sätze beim Schreiben, lässt sie von Claude prüfen (über das eigene Claude-Abo, kein API-Schlüssel) und zeigt Vorschläge wie LanguageTool an. Lernt dabei den eigenen Schreibstil.
+Rechtschreib- und Grammatikprüfung für **Thunderbird, Chrome und Firefox** (und WhatsApp über Altus). Erkennt fertige Sätze beim Schreiben, lässt sie von Claude prüfen (über das eigene Claude-Abo, kein API-Schlüssel) und zeigt Vorschläge wie LanguageTool an. Lernt dabei den eigenen Schreibstil.
+
+**Installation:** siehe [INSTALLATION.md](INSTALLATION.md). **Lizenz:** MIT, siehe [LICENSE](LICENSE).
+
+Datenschutz: Geprüfte Sätze gehen über das lokale Hilfsprogramm an Claude (Anthropic), wie bei jeder Nutzung von Claude Code mit dem eigenen Abo. Gelerntes bleibt lokal in `daten/`.
 
 ## Aufbau
 
@@ -51,19 +55,7 @@ Gelerntes liegt in `daten/` im Haupt-Checkout (nicht im Repo):
 
 ## Installation
 
-Voraussetzungen: Node.js, Claude Code mit Abo-Login (`claude` einmal starten, `/login`).
-
-```
-powershell -ExecutionPolicy Bypass -File installieren.ps1
-```
-
-Meldet das Hilfsprogramm bei Thunderbird, Firefox und Chrome an (Registry unter HKCU) und baut alles. Dann:
-
-- **Thunderbird**: Proxy-Datei `rechtschreibpruefung@lokal` im Ordner `extensions` des Profils mit dem Pfad zu `dist\thunderbird\` (oder einmalig die `.xpi` installieren).
-- **Chrome**: `chrome://extensions` > Entwicklermodus > "Entpackte Erweiterung laden" > `dist\chrome`.
-- **Firefox**: Normales Firefox installiert nur von Mozilla signierte Erweiterungen dauerhaft. Zum Ausprobieren `about:debugging` > Dieser Firefox > "Temporäres Add-on laden" > `dist\firefox\manifest.json` (bis zum Neustart). Dauerhaft: `dist\rechtschreibpruefung-firefox-<version>.zip` bei addons.mozilla.org als "nicht gelistet" signieren lassen.
-
-Empfohlen: eingebaute Rechtschreibprüfung und LanguageTool ausschalten, sonst doppelte Unterstreichungen.
+Kurz: Node.js und Claude Code mit Abo-Login, dann `installieren.ps1`, dann die Erweiterung im jeweiligen Programm laden. Ausführlich, Schritt für Schritt mit Prüfungen (auch für KI-Agenten geeignet): [INSTALLATION.md](INSTALLATION.md).
 
 ## Entwicklung
 
