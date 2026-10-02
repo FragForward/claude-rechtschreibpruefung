@@ -20,6 +20,11 @@ function rspMarkierungFinden() {
   return pos >= 0 ? { ...m, von: pos, bis: pos + m.text.length } : null;
 }
 
+/** Antwort nach dem Einsetzen, das in Lexical-Editoren verzögert abläuft. */
+function rspEingesetzt(p, ergebnis) {
+  return Promise.resolve(ergebnis).then(() => { p.planen(300); return { ok: true }; });
+}
+
 rspHoeren(n => {
   const p = (n.art === 'markierung_ersetzen' && rspMarkierung) ? rspMarkierung.p : window.rspPruefer;
   // Ohne Editor in diesem Rahmen nicht antworten, damit ein anderer Rahmen der Seite antworten kann.
@@ -29,29 +34,20 @@ rspHoeren(n => {
       return { ok: true, eigen: p.modell.eigenerBereich().text, original: p.modell.original(), markierung: rspMarkierung && rspMarkierung.p === p ? rspMarkierung.text : '' };
     case 'eigen_ersetzen': {
       const b = p.modell.eigenerBereich();
-      p.modell.einsetzen(b.start, b.ende, n.text);
-      p.planen(300);
-      return { ok: true };
+      return rspEingesetzt(p, p.modell.einsetzen(b.start, b.ende, n.text));
     }
     case 'markierung_ersetzen': {
       const m = rspMarkierungFinden();
       if (!m) return { ok: false, fehler: 'Markierung nicht mehr vorhanden' };
-      m.p.modell.einsetzen(m.von, m.bis, n.text);
-      m.p.planen(300);
       rspMarkierung = null;
-      return { ok: true };
+      return rspEingesetzt(m.p, m.p.modell.einsetzen(m.von, m.bis, n.text));
     }
     case 'ausschnitt_ersetzen': {
       const b = p.modell.eigenerBereich();
-      if (!n.alt) {
-        p.modell.einsetzen(b.ende, b.ende, (b.ende > b.start ? '\n\n' : '') + n.neu);
-      } else {
-        const pos = b.text.indexOf(n.alt);
-        if (pos < 0) return { ok: false, fehler: 'Stelle im Text nicht gefunden' };
-        p.modell.einsetzen(b.start + pos, b.start + pos + n.alt.length, n.neu);
-      }
-      p.planen(300);
-      return { ok: true };
+      if (!n.alt) return rspEingesetzt(p, p.modell.einsetzen(b.ende, b.ende, (b.ende > b.start ? '\n\n' : '') + n.neu));
+      const pos = b.text.indexOf(n.alt);
+      if (pos < 0) return { ok: false, fehler: 'Stelle im Text nicht gefunden' };
+      return rspEingesetzt(p, p.modell.einsetzen(b.start + pos, b.start + pos + n.alt.length, n.neu));
     }
     case 'schalten':
       p.schalten(n.an);

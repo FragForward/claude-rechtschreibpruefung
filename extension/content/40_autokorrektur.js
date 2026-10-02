@@ -44,13 +44,21 @@ class RspAutokorrektur {
     const wort = t.slice(a, c);
     const neu = this.liste[wort];
     if (!neu || neu === wort || this.ausnahmen.has(wort)) return false;
+    // In Lexical (WhatsApp) ersetzt erst nach kurzer Wartezeit; Enter hätte die Nachricht dann schon gesendet.
+    if (!trenner && m.lexical && m.lexical()) return false;
     this.inArbeit = true;
-    let ok = false;
-    try { ok = m.ersetzen(a, c, neu + trenner); } finally { this.inArbeit = false; }
-    if (!ok) return false;
-    this.letzte = { start: a, alt: wort, neu, trenner, ende: a + neu.length + trenner.length };
-    this.p.blitz(a, a + neu.length);
-    return true;
+    return this.nachErsetzen(m.ersetzen(a, c, neu + trenner), () => {
+      this.letzte = { start: a, alt: wort, neu, trenner, ende: a + neu.length + trenner.length };
+      this.p.blitz(a, a + neu.length);
+    });
+  }
+
+  /** Gemeinsamer Abschluss für sofortige und verzögerte Ersetzung (siehe RspTextModell.ausfuehren). */
+  nachErsetzen(ergebnis, danach) {
+    const ende = ok => { this.inArbeit = false; if (ok) danach(); };
+    if (ergebnis && typeof ergebnis.then === 'function') { ergebnis.then(ende, () => ende(false)); return true; }
+    ende(ergebnis);
+    return !!ergebnis;
   }
 
   zuruecknehmen() {
@@ -60,8 +68,7 @@ class RspAutokorrektur {
     m.aufbauen();
     if (m.cursor() !== l.ende || m.text.slice(l.start, l.ende) !== (l.neu + l.trenner).replace(/ /g, ' ')) return false;
     this.inArbeit = true;
-    try { m.ersetzen(l.start, l.ende, l.alt + l.trenner); } finally { this.inArbeit = false; }
     this.ausnahmen.add(l.alt); // in dieser Mail nicht noch einmal
-    return true;
+    return this.nachErsetzen(m.ersetzen(l.start, l.ende, l.alt + l.trenner), () => {});
   }
 }

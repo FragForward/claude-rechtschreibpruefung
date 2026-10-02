@@ -28,6 +28,26 @@
 ich wollte dir sagen das wir das angebot  bis freitag fertig haben
 lg alex</textarea>
   <div class="editor" contenteditable="true"><div>Hallo Max, der server isthonline und lauft seit gestern.</div><div class="gmail_quote">Zitat wird nicht geprüft</div></div>
+  <div class="editor" id="lexical" contenteditable="true" data-lexical-editor="true">ich hab dir gesagt das wir das morgen machen</div>
+  <script>
+    // Nachbau des WhatsApp-Editors (Lexical): eigene Auswahl, erst im selectionchange übernommen;
+    // Eingaben landen an dieser gemerkten Auswahl, nicht an der aktuellen DOM-Markierung.
+    const lex = document.getElementById('lexical');
+    let lexAuswahl = null;
+    document.addEventListener('selectionchange', () => {
+      const s = getSelection();
+      if (s.rangeCount && lex.contains(s.anchorNode)) lexAuswahl = s.getRangeAt(0).cloneRange();
+    });
+    lex.addEventListener('beforeinput', ev => {
+      if (ev.inputType !== 'insertText' || !lexAuswahl) return;
+      ev.preventDefault();
+      lexAuswahl.deleteContents();
+      const t = document.createTextNode(ev.data);
+      lexAuswahl.insertNode(t);
+      lex.normalize();
+      lex.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ev.data }));
+    });
+  </script>
   <script src="/content.js"></script>
 </body>
 </html>

@@ -228,24 +228,24 @@ class RspPruefer {
     return rspSaetze(this.modell.text).find(s => s.text === satzText) || null;
   }
 
-  wortErsetzen(d, neu) {
+  async wortErsetzen(d, neu) {
     const f = d.fehler, s = this.satzFinden(d.satz);
     if (!s) return;
     const pos = rspWortFinden(s.text, f.wort, f.nr);
     if (pos < 0) return;
     const von = s.start + pos, bis = von + f.wort.length;
     const cursor = this.modell.cursor();
-    if (!this.modell.ersetzen(von, bis, neu)) return;
-    if (cursor >= 0 && (cursor < von || cursor > bis)) {
-      this.modell.aufbauen();
-      this.modell.cursorSetzen(cursor > bis ? cursor + neu.length - (bis - von) : cursor);
-    }
     // Restliche Befunde für den geänderten Satz übernehmen, statt ihn neu prüfen zu lassen.
     const alt = this.eintrag(d.satz);
     const neuerSatz = s.text.slice(0, pos) + neu + s.text.slice(pos + f.wort.length);
     if (alt) {
       const rest = alt.fehler.filter(x => x !== f).map(x => (x.wort === f.wort && x.nr > f.nr ? { ...x, nr: x.nr - 1 } : x));
       this.uebertragen(d.satz, neuerSatz, rest);
+    }
+    if (!(await this.modell.ersetzen(von, bis, neu))) return;
+    if (cursor >= 0 && (cursor < von || cursor > bis)) {
+      this.modell.aufbauen();
+      this.modell.cursorSetzen(cursor > bis ? cursor + neu.length - (bis - von) : cursor);
     }
     rspSenden({ art: 'aktion', aktion: 'uebernommen', von: f.wort, nach: neu, typ: f.typ, eindeutig: f.eindeutig }).then(a => {
       if (a.autokorrektur) this.auto.setzen(a.autokorrektur);
@@ -254,12 +254,12 @@ class RspPruefer {
     this.zeichnen();
   }
 
-  satzErsetzen(d) {
+  async satzErsetzen(d) {
     const s = this.satzFinden(d.satz);
     if (!s) return;
     const neu = d.eintrag.satzVorschlag;
-    if (!this.modell.ersetzen(s.start, s.ende, neu)) return;
     this.cache.set(neu, { zustand: 'fertig', fehler: [], satzVorschlag: '', satzErklaerung: '' });
+    if (!(await this.modell.ersetzen(s.start, s.ende, neu))) return;
     rspSenden({ art: 'aktion', aktion: 'uebernommen', von: d.satz, nach: neu, typ: 'satz' });
     this.zeichnen();
   }

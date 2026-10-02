@@ -104,15 +104,28 @@ class RspTextModell {
     return this.text.length;
   }
 
-  /** Ersetzt einen Bereich über execCommand, damit Strg+Z weiter funktioniert. */
-  ersetzen(von, bis, neu) {
-    const r = this.bereich(von, bis);
-    if (!r) return false;
+  /** Lexical-Editoren (WhatsApp) führen eine eigene Auswahl. */
+  lexical() { return this.wurzel.getAttribute('data-lexical-editor') === 'true'; }
+
+  /**
+   * Markiert den Bereich und führt den Befehl aus. Lexical übernimmt eine neue Markierung erst im
+   * selectionchange-Ereignis; ohne Warten landet der Text am alten Cursor (Rückmeldung 01.10.2026).
+   * Liefert dann ein Promise, sonst sofort das Ergebnis.
+   */
+  ausfuehren(r, befehl) {
     if (this.doc.activeElement !== this.wurzel && this.wurzel !== this.doc.body) this.wurzel.focus({ preventScroll: true });
     const sel = this.doc.getSelection();
     sel.removeAllRanges();
     sel.addRange(r);
-    return this.doc.execCommand('insertText', false, neu);
+    if (!this.lexical()) return befehl();
+    return new Promise(fertig => setTimeout(() => fertig(befehl()), 40));
+  }
+
+  /** Ersetzt einen Bereich über execCommand, damit Strg+Z weiter funktioniert. */
+  ersetzen(von, bis, neu) {
+    const r = this.bereich(von, bis);
+    if (!r) return false;
+    return this.ausfuehren(r, () => this.doc.execCommand('insertText', false, neu));
   }
 
   auswahlBereich() {
@@ -127,13 +140,11 @@ class RspTextModell {
   einsetzen(von, bis, text) {
     let r = this.bereich(von, bis);
     if (!r) { r = this.doc.createRange(); r.setStart(this.wurzel, 0); r.collapse(true); }
-    if (this.wurzel !== this.doc.body) this.wurzel.focus({ preventScroll: true });
-    const sel = this.doc.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(r);
     const html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>');
-    if (!(text.includes('\n') && this.doc.execCommand('insertHTML', false, html))) this.doc.execCommand('insertText', false, text);
-    return true;
+    return this.ausfuehren(r, () => {
+      if (!(text.includes('\n') && this.doc.execCommand('insertHTML', false, html))) this.doc.execCommand('insertText', false, text);
+      return true;
+    });
   }
 
   /** Eigener Text = alles vor Zitat, Weiterleitung oder Signatur. */

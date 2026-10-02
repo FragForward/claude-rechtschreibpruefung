@@ -45,7 +45,7 @@ Object.assign(RspPruefer.prototype, {
   },
 
   /** Wendet die gewählten Vorschläge von hinten nach vorn an, damit die Positionen davor gültig bleiben. */
-  auswahlAnwenden(satzText, auswahl) {
+  async auswahlAnwenden(satzText, auswahl) {
     if (!auswahl.length) return;
     const e = this.eintrag(satzText);
     if (!e) return;
@@ -54,18 +54,22 @@ Object.assign(RspPruefer.prototype, {
     if (!s) return;
     const stellen = auswahl.map(z => ({ f: z.fehler, pos: rspWortFinden(s.text, z.fehler.wort, z.fehler.nr) }))
       .filter(x => x.pos >= 0).sort((a, b) => b.pos - a.pos);
+    // Erst planen und den neuen Satz vormerken, damit er während der (in WhatsApp verzögerten) Ersetzungen nicht neu geprüft wird.
     let neuerSatz = s.text, grenze = Infinity;
+    const plan = [];
+    for (const x of stellen) {
+      if (x.pos + x.f.wort.length > grenze) continue; // überlappt mit einer schon geplanten Stelle
+      neuerSatz = neuerSatz.slice(0, x.pos) + x.f.vorschlag + neuerSatz.slice(x.pos + x.f.wort.length);
+      grenze = x.pos;
+      plan.push(x);
+    }
+    this.uebertragen(satzText, neuerSatz, e.fehler.filter(f => !plan.some(x => x.f === f)));
     const erledigt = [];
-    for (const { f, pos } of stellen) {
-      if (pos + f.wort.length > grenze) continue; // überlappt mit einer schon ersetzten Stelle
-      if (!this.modell.ersetzen(s.start + pos, s.start + pos + f.wort.length, f.vorschlag)) continue;
+    for (const { f, pos } of plan) {
+      if (!(await this.modell.ersetzen(s.start + pos, s.start + pos + f.wort.length, f.vorschlag))) continue;
       this.modell.aufbauen();
-      neuerSatz = neuerSatz.slice(0, pos) + f.vorschlag + neuerSatz.slice(pos + f.wort.length);
-      grenze = pos;
       erledigt.push(f);
     }
-    const rest = e.fehler.filter(f => !erledigt.includes(f));
-    this.uebertragen(satzText, neuerSatz, rest);
     for (const f of erledigt) {
       rspSenden({ art: 'aktion', aktion: 'uebernommen', von: f.wort, nach: f.vorschlag, typ: f.typ, eindeutig: f.eindeutig }).then(a => {
         if (a.autokorrektur) this.auto.setzen(a.autokorrektur);
@@ -81,7 +85,7 @@ Object.assign(RspPruefer.prototype, {
       typ: 'grammatik',
       erklaerung: l.erklaerung,
       knoepfe: [
-        { text: l.knopf, primaer: true, aktion: () => { this.modell.aufbauen(); this.modell.ersetzen(l.von, l.bis, l.neu); this.zeichnen(); } },
+        { text: l.knopf, primaer: true, aktion: async () => { this.modell.aufbauen(); await this.modell.ersetzen(l.von, l.bis, l.neu); this.zeichnen(); } },
         { text: 'Ignorieren', aktion: () => { this.ignoriert.add(d.schluessel); this.zeichnen(); } },
       ],
     });
