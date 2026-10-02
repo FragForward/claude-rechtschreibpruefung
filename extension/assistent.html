@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Claude Schreibassistent</title>
+<style>
+  :root { --text: #1f2328; --leise: #57606a; --rand: #d0d7de; --flaeche: #f6f8fa; --blau: #2f81f7; --bg: #fff; --rot: #cf222e; --gruen: #1a7f37; }
+  @media (prefers-color-scheme: dark) { :root { --text: #e6edf3; --leise: #8d96a0; --rand: #30363d; --flaeche: #161b22; --bg: #0d1117; --rot: #ff7b72; --gruen: #3fb950; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; font: 14px/1.5 system-ui, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+  h1 { font-size: 16px; margin: 0 0 12px; }
+  .leise { color: var(--leise); font-size: 13px; }
+  textarea { width: 100%; font: 14px/1.5 system-ui, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); border: 1px solid var(--rand); border-radius: 8px; padding: 10px; resize: vertical; }
+  .knoepfe { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  button { font: inherit; border: 1px solid var(--rand); background: var(--flaeche); color: var(--text); border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+  button.primaer { background: var(--blau); color: #fff; border-color: var(--blau); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .vergleich { white-space: pre-wrap; background: var(--flaeche); border-radius: 8px; padding: 10px; margin: 10px 0; max-height: 260px; overflow: auto; }
+  del { color: var(--rot); } ins { color: var(--gruen); text-decoration: none; font-weight: 600; }
+  .karte { border: 1px solid var(--rand); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+  .karte h3 { margin: 0 0 4px; font-size: 14px; }
+  .karte.erledigt { opacity: .55; }
+  .fazit { font-weight: 600; margin-bottom: 6px; }
+  .laeuft { display: flex; align-items: center; gap: 10px; padding: 24px 0; }
+  .kreis { width: 18px; height: 18px; border: 3px solid var(--rand); border-top-color: var(--blau); border-radius: 50%; animation: dreh 0.8s linear infinite; }
+  @keyframes dreh { to { transform: rotate(360deg); } }
+  .fehler { color: var(--rot); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <h1 id="titel">Claude Schreibassistent</h1>
+  <div id="wunschBereich" hidden>
+    <div class="leise">Worum soll es in der Antwort gehen? (optional, z. B. "zusagen, Termin Donnerstag 14 Uhr vorschlagen")</div>
+    <textarea id="wunsch" rows="3"></textarea>
+    <div class="knoepfe"><button id="los" class="primaer">Antwort schreiben</button></div>
+  </div>
+  <div id="laeuft" class="laeuft" hidden><div class="kreis"></div><span>Claude arbeitet …</span></div>
+  <div id="fehler" class="fehler" hidden></div>
+  <div id="ergebnis" hidden>
+    <div id="hinweis" class="leise"></div>
+    <div id="vergleich" class="vergleich" hidden></div>
+    <div id="textBereich">
+      <div class="leise">Vorschlag (du kannst ihn hier noch ändern):</div>
+      <textarea id="text" rows="12"></textarea>
+    </div>
+    <div id="pruefung"></div>
+    <div class="knoepfe">
+      <button id="uebernehmen" class="primaer">Übernehmen</button>
+      <button id="nochmal">Nochmal</button>
+      <button id="schliessen">Schließen</button>
+    </div>
+  </div>
+  <script src="plattform.js"></script>
+  <script src="assistent.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Prüfstand</title>
+<style>
+  body { font: 15px/1.5 "Segoe UI", sans-serif; margin: 12px; min-height: 90vh; outline: none; }
+  blockquote { border-left: 2px solid #729fcf; margin: 0; padding-left: 8px; color: #555; }
+</style>
+<script>
+  // Ersatz für die Thunderbird-API: Nachrichten gehen per HTTP an den Prüfstand-Server.
+  // Befehle an das Mailfenster lassen sich mit rspBefehl({ art: ... }) auslösen.
+  window.rspTestPlattform = 'thunderbird';
+  const rspHoerer = [];
+  window.rspBefehl = n => new Promise(fertig => { if (!rspHoerer[0](n, {}, fertig)) fertig(undefined); });
+  window.browser = { runtime: {
+    sendMessage: n => fetch('/nachricht', { method: 'POST', body: JSON.stringify(n) }).then(r => r.json()),
+    onMessage: { addListener: f => rspHoerer.push(f) },
+  } };
+</script>
+</head>
+<body><div>Hallo Max,</div><div><br></div><div> ich habe dir das eingebaut bitte anschauen.<br>ich habe auch noch gleich alles überarbeitet &nbsp; vom Design und sonstigen bitte ebenfalls anschauen.<br>lg alex</div><div><br></div><div>Viele Grüße</div><div class="moz-cite-prefix">Am 01.10.2026 schrieb Max:</div><blockquote type="cite">Hallo Alex,<br><br>kannst du mir bis Freitag das Angebot schicken?<br><br>Gruß Max</blockquote><div class="moz-signature">-- <br>Signatur wird nicht geprüft</div>
+<script>
+  document.designMode = 'on';
+</script>
+<script src="/content.js"></script>
+</body>
+</html>

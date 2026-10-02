@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --text: #1f2328; --leise: #57606a; --hover: #eef1f4; --bg: #fff; --rand: #d0d7de; }
+  @media (prefers-color-scheme: dark) { :root { --text: #e6edf3; --leise: #8d96a0; --hover: #21262d; --bg: #161b22; --rand: #30363d; } }
+  body { margin: 0; padding: 6px; width: 250px; font: 13px/1.4 system-ui, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+  button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: left; padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+  button:hover { background: var(--hover); }
+  .nr { width: 18px; color: var(--leise); }
+  hr { border: 0; border-top: 1px solid var(--rand); margin: 4px 0; }
+  .schalter { justify-content: space-between; }
+  .pille { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; background: #1a7f37; color: #fff; }
+  .pille.aus { background: #8c959f; }
+</style>
+</head>
+<body>
+  <button id="schalter" class="schalter"><span>Prüfung in dieser Mail</span><span id="pille" class="pille">AN</span></button>
+  <hr>
+  <button data-aufgabe="schreiben"><span class="nr">1</span>Antwort schreiben …</button>
+  <button data-aufgabe="verbessern"><span class="nr">2</span>Antwort verbessern</button>
+  <button data-aufgabe="pruefen"><span class="nr">3</span>Antwort prüfen</button>
+  <hr>
+  <button id="optionen"><span class="nr"></span>Einstellungen und Gelerntes</button>
+  <script src="plattform.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

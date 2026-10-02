@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Rechtschreibprüfung</title>
+<style>
+  :root { --text: #1f2328; --leise: #57606a; --rand: #d0d7de; --flaeche: #f6f8fa; --blau: #2f81f7; --bg: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --text: #e6edf3; --leise: #8d96a0; --rand: #30363d; --flaeche: #161b22; --bg: #0d1117; } }
+  body { font: 14px/1.5 system-ui, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); max-width: 860px; margin: 24px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 28px 0 8px; }
+  .leise { color: var(--leise); font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--rand); }
+  th { font-weight: 600; color: var(--leise); font-size: 12px; }
+  button { font: inherit; border: 1px solid var(--rand); background: var(--flaeche); color: var(--text); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+  button.primaer { background: var(--blau); color: #fff; border-color: var(--blau); }
+  input, select { font: inherit; padding: 3px 6px; border: 1px solid var(--rand); border-radius: 6px; background: var(--bg); color: var(--text); }
+  .zeile { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  pre { white-space: pre-wrap; background: var(--flaeche); padding: 12px; border-radius: 8px; font: 13px/1.5 system-ui, sans-serif; }
+  #status.fehler { color: #cf222e; }
+</style>
+</head>
+<body>
+  <h1>Rechtschreibprüfung (Claude)</h1>
+  <div id="status" class="leise">Verbinde mit dem Hilfsprogramm …</div>
+
+  <h2>Einstellungen</h2>
+  <div class="zeile">
+    <label>Modell <select id="modell"><option value="sonnet">Sonnet (gründlich, empfohlen)</option><option value="haiku">Haiku (schneller, übersieht mehr)</option></select></label>
+    <label>Automatisch korrigieren ab <input id="autoSchwelle" type="number" min="1" max="20" style="width:4em"> Übernahmen</label>
+    <label>Auswertung nach <input id="pauseMinuten" type="number" min="1" max="120" style="width:4em"> Minuten Pause</label>
+    <button id="speichern" class="primaer">Speichern</button>
+  </div>
+
+  <h2>Automatische Korrekturen</h2>
+  <div class="leise">Diese Wörter werden beim Tippen sofort ersetzt. Backspace direkt danach macht es rückgängig.</div>
+  <table id="auto"></table>
+
+  <h2>Zählliste: übernommene Korrekturen</h2>
+  <div class="leise">Nur eindeutige Tippfehler werden automatisch, Wörter wie "das/dass" nie.</div>
+  <table id="zaehl"></table>
+
+  <h2>Wörterbuch</h2>
+  <table id="wb"></table>
+
+  <h2>Schreibprofil</h2>
+  <div class="zeile"><span id="journal" class="leise"></span><button id="auswerten">Jetzt auswerten</button></div>
+  <pre id="profil"></pre>
+
+  <script src="plattform.js"></script>
+  <script src="optionen.js"></script>
+</body>
+</html>
