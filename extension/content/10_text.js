@@ -204,7 +204,7 @@ function rspSaetzeImAbsatz(text, von, bis, erg) {
     let e = k + 1;
     while (e < bis && /[.!?"'»«“”)\]]/.test(text[e])) e++;
     if (e < bis && text[e] !== ' ') continue; // URL, Zahl, z.B. mitten im Wort
-    if (c === '.' && e < bis) {
+    if (c === '.') { // Abkürzung oder Zahl, auch am Zeilenende (sonst ginge "z.B." beim Tippen sofort raus)
       const m = /([\p{L}\d]+)$/u.exec(text.slice(Math.max(von, k - 12), k));
       const wort = m ? m[1].toLowerCase() : '';
       if (RSP_ABKUERZUNGEN.has(wort) || /^\d+$/.test(wort)) continue;

@@ -1,9 +1,10 @@
 'use strict';
 // Prüfer je Editor: erkennt fertige Sätze, fragt Claude über den Host, zeichnet und wendet Vorschläge an.
 
-const RSP_PAUSE_MS = 2500;   // so lange nach dem letzten Tastendruck gilt ein Satz mit Satzzeichen als fertig
-const RSP_PAUSE_OFFEN_MS = 4000; // ebenso für Sätze ohne Satzzeichen ab drei Wörtern
-const RSP_RUHE_MS = 600;     // Wartezeit nach einer Eingabe, bevor Sätze gesucht werden
+// Satzzeichen oder Enter schicken sofort; im angefangenen Satz erst nach 1 s ohne Tippen (Wunsch 02.10.2026).
+const RSP_PAUSE_MS = 1000;   // Tipp-Pause, ab der auch der Satz unter dem Cursor geprüft wird (ab drei Wörtern)
+const RSP_RUHE_MS = 600;     // höchstens so lange nach einer Eingabe, bis fertige Sätze gesucht werden
+const RSP_SATZENDE = /^[.!?]$/;
 
 function rspSenden(nachricht) {
   try {
@@ -41,11 +42,12 @@ class RspPruefer {
       if (ev.key === 'Escape' && this.popup.offen()) { this.popup.schliessen(); ev.preventDefault(); return; }
       this.auto.taste(ev);
     });
-    el.addEventListener('input', () => {
+    el.addEventListener('input', ev => {
       this.zuletztGetippt = Date.now();
       this.popup.schliessen();
       this.zeichnenBald();
-      this.planen(RSP_RUHE_MS);
+      const satzFertig = (ev.data && RSP_SATZENDE.test(ev.data)) || ev.inputType === 'insertParagraph' || ev.inputType === 'insertLineBreak';
+      this.planen(satzFertig ? 30 : RSP_RUHE_MS);
     });
     doc.addEventListener('selectionchange', () => this.planen(RSP_RUHE_MS));
     // Textfelder melden Cursorbewegungen nicht über selectionchange
@@ -59,9 +61,13 @@ class RspPruefer {
     win.addEventListener('focus', () => rspSenden({ art: 'autokorrektur_liste' }).then(a => this.auto.setzen(a.autokorrektur)));
   }
 
+  /** Durchlauf planen; ein schon geplanter früherer bleibt, damit Tippen ihn nicht endlos verschiebt. */
   planen(ms) {
+    const faellig = Date.now() + Math.max(0, ms);
+    if (this.timer && this.faellig <= faellig) return;
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.durchlauf(), Math.max(0, ms));
+    this.faellig = faellig;
+    this.timer = setTimeout(() => { this.timer = null; this.durchlauf(); }, Math.max(0, ms));
   }
 
   zeichnenBald() {
@@ -81,15 +87,17 @@ class RspPruefer {
     let nachholen = 0;
     for (const s of this.saetze) {
       if (s.text.length < 4) continue;
-      const drin = !this.alleFertig && c >= s.start && c <= s.ende;
+      // Ein Satz mit Satzzeichen ist fertig, sobald das Zeichen gesetzt ist (Cursor direkt dahinter zählt nicht als "drin").
+      // Ohne Satzzeichen ist er der letzte der Zeile; der Cursor hinter einem gerade getippten Leerzeichen gehört noch dazu.
+      const drin = !this.alleFertig && c >= s.start && (s.abgeschlossen ? c < s.ende : c <= s.absatzBis);
       // Offene Zeile, in der noch geschrieben wird: eigener Eintrag ohne Satzende-Prüfung.
       const schreibt = drin && !s.abgeschlossen;
       if (this.cache.has(s.text) || (schreibt && this.cache.has(s.text + RSP_SCHREIBT))) continue;
       let fertig = !drin;
-      if (!fertig) {
-        const pause = s.abgeschlossen ? RSP_PAUSE_MS : (s.text.split(/\s+/).length >= 3 ? RSP_PAUSE_OFFEN_MS : 0);
-        if (pause && jetzt - this.zuletztGetippt >= pause) fertig = true;
-        else if (pause) nachholen = Math.min(nachholen || Infinity, pause - (jetzt - this.zuletztGetippt));
+      if (!fertig && s.text.split(/\s+/).length >= 3) {
+        const pause = jetzt - this.zuletztGetippt;
+        if (pause >= RSP_PAUSE_MS) fertig = true;
+        else nachholen = Math.min(nachholen || Infinity, RSP_PAUSE_MS - pause);
       }
       if (fertig) this.anfragen(s, text, schreibt);
     }
