@@ -91,7 +91,7 @@ class Lernen {
   }
 
   /** Wandelt Claudes Antwort in eine bereinigte Fehlerliste. */
-  antwortAuswerten(roh, satz, schreibt) {
+  antwortAuswerten(roh, satz, ohneSatzende) {
     let daten = { fehler: [] };
     const a = roh.indexOf('{'), b = roh.lastIndexOf('}');
     if (a >= 0 && b > a) {
@@ -113,7 +113,7 @@ class Lernen {
     }));
     const sv = typeof daten.satz_vorschlag === 'string' ? daten.satz_vorschlag.trim() : '';
     return {
-      fehler: satzendePruefen(zusammenfassen(fehler), satz, schreibt),
+      fehler: satzendePruefen(zusammenfassen(fehler), satz, ohneSatzende),
       satz_vorschlag: sv && sv !== satz.trim() ? sv : '',
       satz_erklaerung: typeof daten.satz_erklaerung === 'string' ? daten.satz_erklaerung : '',
     };
@@ -150,17 +150,22 @@ class Lernen {
 }
 
 /**
- * Satzzeichen am Satzende nur am wirklich letzten Wort und nie, solange die Zeile noch geschrieben wird
- * (Rückmeldung 01.10.2026: "ferig" wurde zu "fertig.", obwohl "sein" folgte).
+ * Satzende-Zeichen am letzten Wort, mitten im Satz nur vor einem neuen Satzanfang
+ * (01.10.2026: "ferig" wurde zu "fertig.", obwohl "sein" folgte; 06.10.2026: Satzgrenzen in der Zeile erkennen).
  */
-function satzendePruefen(fehler, satz, schreibt) {
+function satzendePruefen(fehler, satz, ohneSatzende) {
   const ohneEnde = satz.replace(/[\s"'»«“”)\]]+$/, '');
   return fehler.map(f => {
     const m = /^([\s\S]*?)([.!?]+)$/.exec(f.vorschlag);
     if (!m || f.wort.endsWith(m[2])) return f;
     const amEnde = ohneEnde.endsWith(f.wort) && ohneEnde.lastIndexOf(f.wort) === ohneEnde.length - f.wort.length;
-    if (amEnde && !schreibt) return f;
-    return { ...f, vorschlag: m[1] };
+    if (amEnde) return ohneSatzende ? { ...f, vorschlag: m[1] } : f; // einzeilige Felder (Betreff) ohne Schlusszeichen
+    // Mitten im Satz nur, wenn dort wirklich ein neuer Satz beginnt: das folgende Wort ist gross oder soll gross werden.
+    const pos = satz.indexOf(f.wort);
+    const naechstes = ((pos < 0 ? '' : satz.slice(pos + f.wort.length)).trimStart().match(/^[\p{L}\p{N}]+/u) || [''])[0];
+    const neuerSatz = naechstes && (/^\p{Lu}/u.test(naechstes) ||
+      fehler.some(g => g !== f && g.wort === naechstes && /^\p{Lu}/u.test(g.vorschlag) && !/^\p{Lu}/u.test(naechstes)));
+    return neuerSatz ? f : { ...f, vorschlag: m[1] };
   }).filter(f => f.vorschlag !== f.wort);
 }
 
