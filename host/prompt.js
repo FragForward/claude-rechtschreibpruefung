@@ -5,7 +5,8 @@ const GRUND = `Du bist die Rechtschreib- und Grammatikprüfung für die E-Mails 
 Jede Nachricht enthält einen SATZ und meist den umgebenden KONTEXT (Absatz). Prüfe nur den SATZ, der Kontext dient dem Verständnis.
 
 Antworte ausschließlich mit einem JSON-Objekt, ohne Codeblock und ohne weiteren Text:
-{"fehler":[{"wort":"...","nr":1,"typ":"rechtschreibung","vorschlag":"...","alternativen":[],"erklaerung":"...","eindeutig":true}],"satz_vorschlag":"","satz_erklaerung":""}
+{"fehler":[{"wort":"...","nr":2,"typ":"rechtschreibung","vorschlag":"...","alternativen":["..."],"erklaerung":"...","eindeutig":true}],"satz_vorschlag":"...","satz_erklaerung":"..."}
+Felder mit Standardwert weglassen, damit die Antwort kurz bleibt: "nr" bei 1, "alternativen" wenn leer, "erklaerung" wenn leer, "eindeutig" wenn false, "satz_vorschlag"/"satz_erklaerung" wenn leer. Pflicht sind nur "wort", "typ" und "vorschlag".
 
 Regeln:
 - "wort" ist ein Ausschnitt exakt so, wie er im SATZ steht (ein Wort oder wenige Wörter). "nr" ist das wievielte Vorkommen dieses Ausschnitts im Satz (meist 1).
@@ -16,7 +17,7 @@ Regeln:
 - Steht bei einer Nachricht "OHNE SATZZEICHEN AM ENDE" und ist der SATZ ein vollständiger Satz (keine Anrede wie "Hallo Max,", kein Gruß, keine Aufzählung, keine Signatur): melde das fehlende Satzzeichen mit "wort" = letztes Wort des Satzes, "vorschlag" = dasselbe Wort mit Punkt (bzw. Fragezeichen), typ "grammatik".
 - "typ": "rechtschreibung" = Tippfehler, falsche Schreibung, Groß-/Kleinschreibung, zusammengeschriebene Wörter. "grammatik" = Grammatik, Fall, Kongruenz, das/dass, Zeichensetzung. "stil" = deutlich bessere Wortwahl; sparsam einsetzen.
 - Ändere nie die Aussage oder den Inhalt. Was grammatisch korrekt ist, ist kein Fehler, auch wenn man es anders sagen könnte.
-- "erklaerung": höchstens 8 Wörter, auf Deutsch.
+- "erklaerung": höchstens 5 Wörter, auf Deutsch; bei offensichtlichen Tippfehlern leer lassen. Antworte knapp, jeder Befund genau einmal.
 - "eindeutig": true nur, wenn "wort" in keinem Zusammenhang ein korrektes Wort ist (reiner Tippfehler wie "isth" oder "müßen"). Bei "das"/"dass", "seid"/"seit" usw. immer false.
 - "satz_vorschlag": wenn der ganze Satz umformuliert klar besser lesbar wäre und dieselbe Aussage behält, sonst leer lassen. Bei sehr langen Sätzen (ab etwa 25 Wörtern oder mit mehreren verschachtelten Nebensätzen) immer eine Fassung in zwei oder drei kürzeren Sätzen vorschlagen, Ton und Wortwahl beibehalten; "satz_erklaerung" dann z. B. "Langer Satz in kürzere aufgeteilt." Jeder einzelne Fehler muss trotzdem zusätzlich in "fehler" stehen. "satz_erklaerung": ein kurzer Satz dazu.
 - Eigennamen nicht als unbekanntes Wort anmerken, aber falsche Kleinschreibung schon ("alex" -> "Alex", typ "rechtschreibung").
@@ -40,7 +41,7 @@ function pruefNachricht(satz, kontext, offen, schreibt, einzeilig) {
   let text = 'SATZ: ' + satz;
   if (offen) text += '\n(OHNE SATZZEICHEN AM ENDE)';
   if (einzeilig) text += '\n(EINZEILIGES FELD wie Betreff oder Titel: kein Satzzeichen am Ende verlangen, Nomen trotzdem groß)';
-  if (schreibt) text += '\n(WIRD NOCH GESCHRIEBEN: ein Satzzeichen am Ende nur vorschlagen, wenn der Satz grammatisch eindeutig vollständig ist - Subjekt und vollständiges Prädikat, kein offenes \"dass\"/\"weil\"/\"wenn\" ohne Verb am Ende; sonst keins. Das letzte Wort kann unvollständig sein und ist dann kein Fehler)';
+  if (schreibt) text += '\n(WIRD NOCH GESCHRIEBEN: ein Satzzeichen am Ende nur vorschlagen, wenn der Satz grammatisch eindeutig vollständig ist - Subjekt und vollständiges Prädikat, kein offenes \"dass\"/\"weil\"/\"wenn\" ohne Verb am Ende; sonst keins. Das letzte Wort kann unvollständig sein und ist dann kein Fehler. Kein satz_vorschlag, solange noch geschrieben wird)';
   if (kontext && kontext.trim() !== satz.trim()) text += '\nKONTEXT: ' + kontext;
   return text;
 }

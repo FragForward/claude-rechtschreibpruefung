@@ -103,9 +103,19 @@ class Sitzung {
     return this.anfragen >= maxAnfragen || Date.now() - this.gestartet > maxStunden * 3600000;
   }
 
-  fragen(text, zeitlimit = 45000) {
+  /**
+   * Stellt eine Nachricht in die Warteschlange. Mit gruppe ersetzt sie eine noch wartende aeltere Fassung
+   * derselben Gruppe (beim Weitertippen veraltet jede Zwischenfassung eines Satzes; 08.10.2026).
+   */
+  fragen(text, zeitlimit = 90000, gruppe) {
     return new Promise((resolve, reject) => {
-      this.warteschlange.push({ text, zeitlimit, resolve, reject });
+      if (gruppe) {
+        for (const alt of this.warteschlange.filter(a => a.gruppe === gruppe)) {
+          this.warteschlange.splice(this.warteschlange.indexOf(alt), 1);
+          alt.reject(Object.assign(new Error('verworfen'), { verworfen: true }));
+        }
+      }
+      this.warteschlange.push({ text, zeitlimit, resolve, reject, gruppe });
       this.weiter();
     });
   }
