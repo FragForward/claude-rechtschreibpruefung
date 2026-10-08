@@ -115,7 +115,10 @@ class RspPruefer {
     if (this.cache.size > 500) this.cache.delete(this.cache.keys().next().value);
     const kontext = rspKontext(text, s);
     const einzeilig = this.element.tagName === 'INPUT'; // Betreff, Titel: kein Satzzeichen am Ende
-    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt && !einzeilig, schreibt, einzeilig }).then(a => {
+    // gruppe: Satzanfang; eine neuere Fassung desselben Satzes ersetzt im Host die noch wartende alte.
+    const gruppe = s.text.slice(0, 40);
+    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt && !einzeilig, schreibt, einzeilig, gruppe }).then(a => {
+      if (a.ok && a.verworfen) { if (this.cache.get(schluessel) === eintrag) this.cache.delete(schluessel); this.zeichnenBald(); return; }
       if (!a.ok && /invalidated|ungültig/i.test(a.fehler || '')) {
         // Erweiterung wurde neu geladen; dieses Skript ist verwaist, das neue übernimmt.
         this.aktiv = false;
