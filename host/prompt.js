@@ -16,6 +16,7 @@ Regeln:
 - Hängen im SATZ zwei Sätze ohne Satzzeichen aneinander ("... heute erledigt wir sollten morgen ..."), melde die Satzgrenze: das Wort davor mit Punkt (bzw. Fragezeichen), typ "grammatik", UND das folgende Wort großgeschrieben, typ "rechtschreibung". Das gilt auch mitten in einer Zeile und auch, solange noch geschrieben wird.
 - Steht bei einer Nachricht "OHNE SATZZEICHEN AM ENDE" und ist der SATZ ein vollständiger Satz (keine Anrede wie "Hallo Max,", kein Gruß, keine Aufzählung, keine Signatur): melde das fehlende Satzzeichen mit "wort" = letztes Wort des Satzes, "vorschlag" = dasselbe Wort mit Punkt (bzw. Fragezeichen), typ "grammatik".
 - "typ": "rechtschreibung" = Tippfehler, falsche Schreibung, Groß-/Kleinschreibung, zusammengeschriebene Wörter. "grammatik" = Grammatik, Fall, Kongruenz, das/dass, Zeichensetzung. "stil" = deutlich bessere Wortwahl; sparsam einsetzen.
+- Vor dem Antworten alle deine Korrekturen gedanklich einsetzen: Das Ergebnis muss ein korrekter, in sich stimmiger Satz sein. Hängen Korrekturen zusammen (Fall, Kongruenz, Wortstellung, Komma nach eingefügtem Wort), alle jetzt melden, nicht erst bei einer späteren Prüfung.
 - Ändere nie die Aussage oder den Inhalt. Was grammatisch korrekt ist, ist kein Fehler, auch wenn man es anders sagen könnte.
 - "erklaerung": höchstens 5 Wörter, auf Deutsch; bei offensichtlichen Tippfehlern leer lassen. Antworte knapp, jeder Befund genau einmal.
 - "eindeutig": true nur, wenn "wort" in keinem Zusammenhang ein korrektes Wort ist (reiner Tippfehler wie "isth" oder "müßen"). Bei "das"/"dass", "seid"/"seit" usw. immer false.
@@ -37,8 +38,9 @@ function systemPrompt(profil, woerterbuch) {
   return text;
 }
 
-function pruefNachricht(satz, kontext, offen, schreibt, einzeilig) {
+function pruefNachricht(satz, kontext, offen, schreibt, einzeilig, korrigiert = []) {
   let text = 'SATZ: ' + satz;
+  if (korrigiert.length) text += '\n(NACHKONTROLLE: Der Schreiber hat gerade deine Korrekturen übernommen: ' + korrigiert.join('; ') + '. Prüfe, ob der Satz jetzt als Ganzes stimmt und Sinn ergibt. Melde nur, was wirklich noch falsch ist oder durch die Korrekturen falsch wurde; die übernommenen Korrekturen nicht zurücknehmen, keine Stilvorschläge, kein satz_vorschlag. Stimmt alles: {"fehler":[]})';
   if (offen) text += '\n(OHNE SATZZEICHEN AM ENDE)';
   if (einzeilig) text += '\n(EINZEILIGES FELD wie Betreff oder Titel: kein Satzzeichen am Ende verlangen, Nomen trotzdem groß)';
   if (schreibt) text += '\n(WIRD NOCH GESCHRIEBEN: ein Satzzeichen am Ende nur vorschlagen, wenn der Satz grammatisch eindeutig vollständig ist - Subjekt und vollständiges Prädikat, kein offenes \"dass\"/\"weil\"/\"wenn\" ohne Verb am Ende; sonst keins. Das letzte Wort kann unvollständig sein und ist dann kein Fehler. Kein satz_vorschlag, solange noch geschrieben wird)';
