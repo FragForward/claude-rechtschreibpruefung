@@ -8,6 +8,16 @@ const { Lernen, einsetzen } = require('./lernen');
 const prompt = require('./prompt');
 const assistent = require('./assistent');
 
+/**
+ * Gegenprüfung nur, wo Vorschläge zusammenwirken können: ab zwei Befunden oder bei einem Befund, der mehr als
+ * Groß-/Kleinschreibung oder ein Satzzeichen ändert (spart bei langen Mails die halbe Wartezeit; 12.10.2026).
+ */
+function gegenpruefungNoetig(fehler) {
+  if (fehler.length !== 1) return fehler.length > 1;
+  const kern = t => t.toLowerCase().replace(/[.,;:!?]/g, '').trim();
+  return kern(fehler[0].wort) !== kern(fehler[0].vorschlag);
+}
+
 const DATEN = process.env.RSP_DATEN || path.join(__dirname, '..', 'daten');
 fs.mkdirSync(DATEN, { recursive: true });
 logStarten(DATEN);
@@ -70,7 +80,7 @@ async function bearbeiten(n) {
       }
       const erg = lernen.antwortAuswerten(roh, satz, n.einzeilig === true);
       // Gegenprüfung: Satz mit allen Vorschlägen als Ganzes lesen lassen, bevor etwas angezeigt wird.
-      if (erg.fehler.length && !sitzung.wartet(gruppe)) {
+      if (gegenpruefungNoetig(erg.fehler) && !sitzung.wartet(gruppe)) {
         try {
           const roh2 = await sitzung.fragen(prompt.gegenpruefNachricht(pruefText, erg.fehler, einsetzen(satz, erg.fehler)), 90000, undefined, true);
           const vorher = erg.fehler.map(f => f.wort + '>' + f.vorschlag).join('|');

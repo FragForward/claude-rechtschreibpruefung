@@ -86,7 +86,9 @@ class RspPruefer {
     const text = this.modell.text, c = this.modell.cursor(), jetzt = Date.now();
     this.saetze = rspSaetze(text);
     let nachholen = 0;
-    for (const s of this.saetze) {
+    // Der Satz am Cursor zuerst, dann nach Abstand: die Schlange im Host arbeitet der Reihe nach.
+    const abstand = s => (c < 0 ? 0 : c < s.start ? s.start - c : c > s.ende ? c - s.ende : -1);
+    for (const s of [...this.saetze].sort((a, b) => abstand(a) - abstand(b))) {
       if (s.text.length < 4) continue;
       // Ein Satz mit Satzzeichen ist fertig, sobald das Zeichen gesetzt ist (Cursor direkt dahinter zählt nicht als "drin").
       // Ohne Satzzeichen ist er der letzte der Zeile; der Cursor hinter einem gerade getippten Leerzeichen gehört noch dazu.

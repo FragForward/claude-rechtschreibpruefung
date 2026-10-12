@@ -14,15 +14,44 @@ class RspTextModell {
     this.teile = [];
   }
 
-  /** Liest den Text neu ein; Zeilenumbrüche im Quelltext und geschützte Leerzeichen zählen als Leerzeichen. */
+  /**
+   * Liest den Text neu ein; geschützte Leerzeichen zählen als Leerzeichen. Leerraum, den der Browser
+   * zusammenfasst (Quelltext-Umbrüche gespeicherter Entwürfe, 12.10.2026), wird wie angezeigt zu einem
+   * Leerzeichen; karte bildet dann Text- auf DOM-Stellen ab.
+   */
   aufbauen() {
     const teile = [];
+    const fasstZusammen = new Map();
     let text = '';
     const umbruch = () => { if (text && !text.endsWith('\n')) text += '\n'; };
+    const zusammenfassen = el => {
+      if (!fasstZusammen.has(el)) {
+        const ws = el && this.doc.defaultView ? this.doc.defaultView.getComputedStyle(el).whiteSpace : 'normal';
+        fasstZusammen.set(el, ws === 'normal' || ws === 'nowrap');
+      }
+      return fasstZusammen.get(el);
+    };
     const gehe = knoten => {
       for (let k = knoten.firstChild; k; k = k.nextSibling) {
         if (k.nodeType === 3) {
-          if (k.data) { teile.push({ knoten: k, start: text.length, laenge: k.data.length }); text += k.data.replace(/[\r\n\t ]/g, ' '); }
+          if (!k.data) continue;
+          if (!/[ \t\r\n]{2}|[\t\r\n]/.test(k.data) || !zusammenfassen(k.parentElement)) {
+            teile.push({ knoten: k, start: text.length, laenge: k.data.length });
+            text += k.data.replace(/[\r\n\t\u00a0]/g, ' ');
+            continue;
+          }
+          let neu = '';
+          const karte = [];
+          const davorLeer = /[ \n]$/.test(text);
+          for (let i = 0; i < k.data.length; i++) {
+            const leer = /[ \t\r\n]/.test(k.data[i]);
+            if (leer && (neu ? neu.endsWith(' ') : davorLeer)) continue;
+            karte.push(i);
+            neu += leer || k.data[i] === '\u00a0' ? ' ' : k.data[i];
+          }
+          karte.push(k.data.length);
+          teile.push({ knoten: k, start: text.length, laenge: neu.length, karte });
+          text += neu;
         } else if (k.nodeType === 1) {
           if (k.matches(RSP_UEBERSPRINGEN)) { umbruch(); continue; }
           if (k.nodeName === 'BR') { text += '\n'; continue; }
@@ -52,7 +81,7 @@ class RspTextModell {
     if (amEnde && pos === teil.start && i > 0 && t[i - 1].start + t[i - 1].laenge === pos) teil = t[i - 1];
     const offset = pos - teil.start;
     if (offset > teil.laenge) return null;
-    return { knoten: teil.knoten, offset };
+    return { knoten: teil.knoten, offset: teil.karte ? teil.karte[offset] : offset };
   }
 
   bereich(von, bis) {
@@ -95,6 +124,11 @@ class RspTextModell {
   positionVon(knoten, offset) {
     if (knoten.nodeType === 3) {
       const teil = this.teile.find(t => t.knoten === knoten);
+      if (teil && teil.karte) {
+        let i = 0;
+        while (i < teil.laenge && teil.karte[i + 1] <= offset) i++;
+        return teil.start + i;
+      }
       if (teil) return teil.start + Math.min(offset, teil.laenge);
     }
     const r = this.doc.createRange();
