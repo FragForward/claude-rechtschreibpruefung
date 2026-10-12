@@ -29,8 +29,8 @@ function rspAnHost(nachricht) {
       const id = rspNaechsteId++;
       rspOffen.set(id, erledigt);
       rspPort.postMessage({ ...nachricht, id });
-      // Pruefungen warten hinter anderen in der Schlange; die Frist zaehlt ab dem Abschicken.
-      const frist = { auswerten: 240000, assistent: 240000, pruefen: 150000 }[nachricht.art] || 60000;
+      // Pruefungen warten bei langen Mails lange in der Schlange; der Host bricht haengende Antworten selbst ab.
+      const frist = { auswerten: 240000, assistent: 240000, pruefen: 600000 }[nachricht.art] || 60000;
       setTimeout(() => {
         if (rspOffen.has(id)) { rspOffen.delete(id); erledigt({ id, ok: false, fehler: 'Zeitüberschreitung' }); }
       }, frist);
