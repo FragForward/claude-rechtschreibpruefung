@@ -33,10 +33,22 @@ Object.assign(RspPruefer.prototype, {
     return vorlaeufig && vorlaeufig.zustand === 'fertig' ? vorlaeufig : null;
   },
 
-  /** Restbefunde auf den geänderten Satz übertragen, unter demselben Schlüsseltyp wie bisher. */
-  uebertragen(altSatz, neuerSatz, rest) {
+  /**
+   * Restbefunde auf den geänderten Satz übertragen. Ist im fertigen Satz nichts mehr offen, wird er
+   * mit den übernommenen Änderungen als Ganzes nachkontrolliert (Wunsch 12.10.2026).
+   */
+  uebertragen(altSatz, neuerSatz, rest, aenderungen) {
     const voll = this.cache.get(altSatz);
-    const schluessel = neuerSatz + (voll && voll.zustand === 'fertig' ? '' : RSP_SCHREIBT);
+    const istVoll = !!(voll && voll.zustand === 'fertig');
+    const bisher = (this.nachkontrolle.get(altSatz) || []).concat(aenderungen || []);
+    this.nachkontrolle.delete(altSatz);
+    if (istVoll && !rest.length && bisher.length) {
+      this.nachkontrolle.set(neuerSatz, bisher);
+      this.cache.delete(neuerSatz);
+      return;
+    }
+    if (bisher.length) this.nachkontrolle.set(neuerSatz, bisher);
+    const schluessel = neuerSatz + (istVoll ? '' : RSP_SCHREIBT);
     if (!this.cache.has(schluessel)) this.cache.set(schluessel, { zustand: 'fertig', fehler: rest, satzVorschlag: '', satzErklaerung: '' });
   },
 
@@ -89,8 +101,8 @@ Object.assign(RspPruefer.prototype, {
       plan.push(x);
     }
     if (!plan.length) return;
-    // Vormerken, damit der geänderte Satz nicht neu geprüft wird.
-    this.uebertragen(satzText, neuerSatz, e.fehler.filter(f => !plan.some(x => x.f === f)));
+    // Vormerken: Restbefunde übernehmen oder den fertigen Satz nachkontrollieren.
+    this.uebertragen(satzText, neuerSatz, e.fehler.filter(f => !plan.some(x => x.f === f)), plan.map(x => x.f.wort + ' -> ' + x.neu));
     const von = Math.min(...plan.map(x => x.pos));
     const bis = Math.max(...plan.map(x => x.pos + x.f.wort.length));
     const ersatz = neuerSatz.slice(von, bis + neuerSatz.length - s.text.length);

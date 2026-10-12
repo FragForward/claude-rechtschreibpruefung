@@ -61,13 +61,13 @@ async function bearbeiten(n) {
       lernen.aktivitaet();
       let roh;
       try {
-        roh = await sitzung.fragen(prompt.pruefNachricht(String(n.satz || ''), String(n.kontext || ''), n.offen === true, n.schreibt === true, n.einzeilig === true), 90000, n.gruppe ? String(n.gruppe) : undefined);
+        roh = await sitzung.fragen(prompt.pruefNachricht(String(n.satz || ''), String(n.kontext || ''), n.offen === true, n.schreibt === true, n.einzeilig === true, Array.isArray(n.korrigiert) ? n.korrigiert.map(String) : []), 90000, n.gruppe ? String(n.gruppe) : undefined);
       } catch (e) {
         if (e.verworfen) return { fehler: [], verworfen: true }; // neuere Fassung desselben Satzes wartet schon
         throw e;
       }
       const erg = lernen.antwortAuswerten(roh, String(n.satz || ''), n.einzeilig === true);
-      lernen.journal({ art: 'geprueft', satz: n.satz, fehler: erg.fehler.map(f => ({ wort: f.wort, vorschlag: f.vorschlag, typ: f.typ })), satz_vorschlag: erg.satz_vorschlag });
+      lernen.journal({ art: 'geprueft', satz: n.satz, nachkontrolle: Array.isArray(n.korrigiert) || undefined, fehler: erg.fehler.map(f => ({ wort: f.wort, vorschlag: f.vorschlag, typ: f.typ })), satz_vorschlag: erg.satz_vorschlag });
       return erg;
     }
 

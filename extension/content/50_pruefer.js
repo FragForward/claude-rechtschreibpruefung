@@ -24,6 +24,7 @@ class RspPruefer {
     this.auto = new RspAutokorrektur(this);
     this.cache = new Map();      // Satztext -> { zustand, fehler, satzVorschlag, satzErklaerung }
     this.ignoriert = new Set();
+    this.nachkontrolle = new Map(); // korrigierter Satz -> übernommene Änderungen ("alt -> neu")
     this.blitze = [];
     this.saetze = [];
     this.zuletztGetippt = 0;
@@ -117,7 +118,8 @@ class RspPruefer {
     const einzeilig = this.element.tagName === 'INPUT'; // Betreff, Titel: kein Satzzeichen am Ende
     // gruppe: Satzanfang; eine neuere Fassung desselben Satzes ersetzt im Host die noch wartende alte.
     const gruppe = s.text.slice(0, 40);
-    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt && !einzeilig, schreibt, einzeilig, gruppe }).then(a => {
+    const korrigiert = schreibt ? undefined : this.nachkontrolle.get(s.text);
+    rspSenden({ art: 'pruefen', satz: s.text, kontext, offen: !s.abgeschlossen && !schreibt && !einzeilig, schreibt, einzeilig, gruppe, korrigiert }).then(a => {
       if (a.ok && a.verworfen) { if (this.cache.get(schluessel) === eintrag) this.cache.delete(schluessel); this.zeichnenBald(); return; }
       if (!a.ok && /invalidated|ungültig/i.test(a.fehler || '')) {
         // Erweiterung wurde neu geladen; dieses Skript ist verwaist, das neue übernimmt.
@@ -136,6 +138,7 @@ class RspPruefer {
         return;
       }
       eintrag.zustand = 'fertig';
+      if (!schreibt) this.nachkontrolle.delete(s.text);
       eintrag.fehler = (a.fehler || []).filter(f => !/ {2}/.test(f.wort)); // Leerzeichen prüft die Erweiterung selbst
       eintrag.satzVorschlag = a.satz_vorschlag || '';
       eintrag.satzErklaerung = a.satz_erklaerung || '';
@@ -249,12 +252,12 @@ class RspPruefer {
     if (pos < 0) return;
     const von = s.start + pos, bis = von + f.wort.length;
     const cursor = this.modell.cursor();
-    // Restliche Befunde für den geänderten Satz übernehmen, statt ihn neu prüfen zu lassen.
+    // Restliche Befunde übernehmen; ist nichts mehr offen, wird der Satz nachkontrolliert.
     const alt = this.eintrag(d.satz);
     const neuerSatz = s.text.slice(0, pos) + neu + s.text.slice(pos + f.wort.length);
     if (alt) {
       const rest = alt.fehler.filter(x => x !== f).map(x => (x.wort === f.wort && x.nr > f.nr ? { ...x, nr: x.nr - 1 } : x));
-      this.uebertragen(d.satz, neuerSatz, rest);
+      this.uebertragen(d.satz, neuerSatz, rest, [f.wort + ' -> ' + neu]);
     }
     if (!(await this.modell.ersetzen(von, bis, neu))) return;
     if (cursor >= 0 && (cursor < von || cursor > bis)) {
