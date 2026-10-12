@@ -16,7 +16,7 @@ Regeln:
 - Hängen im SATZ zwei Sätze ohne Satzzeichen aneinander ("... heute erledigt wir sollten morgen ..."), melde die Satzgrenze: das Wort davor mit Punkt (bzw. Fragezeichen), typ "grammatik", UND das folgende Wort großgeschrieben, typ "rechtschreibung". Das gilt auch mitten in einer Zeile und auch, solange noch geschrieben wird.
 - Steht bei einer Nachricht "OHNE SATZZEICHEN AM ENDE" und ist der SATZ ein vollständiger Satz (keine Anrede wie "Hallo Max,", kein Gruß, keine Aufzählung, keine Signatur): melde das fehlende Satzzeichen mit "wort" = letztes Wort des Satzes, "vorschlag" = dasselbe Wort mit Punkt (bzw. Fragezeichen), typ "grammatik".
 - "typ": "rechtschreibung" = Tippfehler, falsche Schreibung, Groß-/Kleinschreibung, zusammengeschriebene Wörter. "grammatik" = Grammatik, Fall, Kongruenz, das/dass, Zeichensetzung. "stil" = deutlich bessere Wortwahl; sparsam einsetzen.
-- Vor dem Antworten alle deine Korrekturen gedanklich einsetzen: Das Ergebnis muss ein korrekter, in sich stimmiger Satz sein. Hängen Korrekturen zusammen (Fall, Kongruenz, Wortstellung, Komma nach eingefügtem Wort), alle jetzt melden, nicht erst bei einer späteren Prüfung.
+- Hängen Korrekturen zusammen (Fall, Kongruenz, Wortstellung, Komma nach eingefügtem Wort), alle melden. Zwei Befunde nie für überlappende Ausschnitte. Genau ein JSON-Objekt, keine nachträgliche Korrektur im Text.
 - Ändere nie die Aussage oder den Inhalt. Was grammatisch korrekt ist, ist kein Fehler, auch wenn man es anders sagen könnte.
 - "erklaerung": höchstens 5 Wörter, auf Deutsch; bei offensichtlichen Tippfehlern leer lassen. Antworte knapp, jeder Befund genau einmal.
 - "eindeutig": true nur, wenn "wort" in keinem Zusammenhang ein korrektes Wort ist (reiner Tippfehler wie "isth" oder "müßen"). Bei "das"/"dass", "seid"/"seit" usw. immer false.
@@ -29,7 +29,7 @@ Regeln:
 - Englische Sätze auf Englisch prüfen.
 - Keine Fehler: {"fehler":[]}
 
-Ausnahmen: Nachrichten, die mit AUFWAERMEN oder AUSWERTUNG beginnen, beantwortest du so, wie es dort verlangt wird.`;
+Ausnahmen: Nachrichten, die mit AUFWAERMEN, AUSWERTUNG oder GEGENPRUEFUNG beginnen, beantwortest du so, wie es dort verlangt wird.`;
 
 function systemPrompt(profil, woerterbuch) {
   let text = GRUND;
@@ -46,6 +46,16 @@ function pruefNachricht(satz, kontext, offen, schreibt, einzeilig, korrigiert = 
   if (schreibt) text += '\n(WIRD NOCH GESCHRIEBEN: ein Satzzeichen am Ende nur vorschlagen, wenn der Satz grammatisch eindeutig vollständig ist - Subjekt und vollständiges Prädikat, kein offenes \"dass\"/\"weil\"/\"wenn\" ohne Verb am Ende; sonst keins. Das letzte Wort kann unvollständig sein und ist dann kein Fehler. Kein satz_vorschlag, solange noch geschrieben wird)';
   if (kontext && kontext.trim() !== satz.trim()) text += '\nKONTEXT: ' + kontext;
   return text;
+}
+
+/** Zweiter Blick vor dem Anzeigen: Ergibt der Satz mit allen Vorschlägen Sinn? (Wunsch 12.10.2026) */
+function gegenpruefNachricht(pruefText, fehler, eingesetzt) {
+  const liste = fehler.map(f => `"${f.wort}" -> "${f.vorschlag}"`).join('; ');
+  return `GEGENPRUEFUNG: Prüfe deine Vorschläge, bevor sie dem Schreiber gezeigt werden.
+${pruefText}
+DEINE VORSCHLAEGE: ${liste}
+SATZ MIT ALLEN VORSCHLAEGEN: ${eingesetzt}
+Lies den Satz mit allen Vorschlägen als Ganzes: Ist er korrekt, ergibt er Sinn und sagt er dasselbe wie das Original? Streiche Vorschläge, die falsch sind, unnötig sind oder den Sinn verändern; korrigiere sie; ergänze, was noch fehlt (auch Folgefehler wie Artikel, Fall oder Komma). Antworte mit der vollständigen, endgültigen Fehlerliste im üblichen JSON-Format, bezogen auf den ursprünglichen SATZ, ohne satz_vorschlag.`;
 }
 
 function auswertungsNachricht(profil, eintraege) {
@@ -80,4 +90,4 @@ Ignorierte Vorschläge zeigen, dass er es so will. Behalte Wissen aus dem bisher
 Antworte NUR mit dem Profil zwischen <profil> und </profil>.`;
 }
 
-module.exports = { systemPrompt, pruefNachricht, auswertungsNachricht };
+module.exports = { systemPrompt, pruefNachricht, gegenpruefNachricht, auswertungsNachricht };

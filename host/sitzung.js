@@ -105,9 +105,9 @@ class Sitzung {
 
   /**
    * Stellt eine Nachricht in die Warteschlange. Mit gruppe ersetzt sie eine noch wartende aeltere Fassung
-   * derselben Gruppe (beim Weitertippen veraltet jede Zwischenfassung eines Satzes; 08.10.2026).
+   * derselben Gruppe (08.10.2026); vorne = vor alle Wartenden (Gegenprüfung eines gerade geprüften Satzes).
    */
-  fragen(text, zeitlimit = 90000, gruppe) {
+  fragen(text, zeitlimit = 90000, gruppe, vorne = false) {
     return new Promise((resolve, reject) => {
       if (gruppe) {
         for (const alt of this.warteschlange.filter(a => a.gruppe === gruppe)) {
@@ -115,9 +115,14 @@ class Sitzung {
           alt.reject(Object.assign(new Error('verworfen'), { verworfen: true }));
         }
       }
-      this.warteschlange.push({ text, zeitlimit, resolve, reject, gruppe });
+      this.warteschlange[vorne ? 'unshift' : 'push']({ text, zeitlimit, resolve, reject, gruppe });
       this.weiter();
     });
+  }
+
+  /** Wartet schon eine neuere Fassung dieser Gruppe? */
+  wartet(gruppe) {
+    return !!gruppe && this.warteschlange.some(a => a.gruppe === gruppe);
   }
 
   // Immer nur eine Nachricht offen: Claude Code fasst sonst wartende Nachrichten zu einem Zug zusammen.

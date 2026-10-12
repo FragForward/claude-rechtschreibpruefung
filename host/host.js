@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { log, logStarten } = require('./log');
 const { Sitzung } = require('./sitzung');
-const { Lernen } = require('./lernen');
+const { Lernen, einsetzen } = require('./lernen');
 const prompt = require('./prompt');
 const assistent = require('./assistent');
 
@@ -59,14 +59,28 @@ async function bearbeiten(n) {
 
     case 'pruefen': {
       lernen.aktivitaet();
+      const satz = String(n.satz || ''), gruppe = n.gruppe ? String(n.gruppe) : undefined;
+      const pruefText = prompt.pruefNachricht(satz, String(n.kontext || ''), n.offen === true, n.schreibt === true, n.einzeilig === true, Array.isArray(n.korrigiert) ? n.korrigiert.map(String) : []);
       let roh;
       try {
-        roh = await sitzung.fragen(prompt.pruefNachricht(String(n.satz || ''), String(n.kontext || ''), n.offen === true, n.schreibt === true, n.einzeilig === true, Array.isArray(n.korrigiert) ? n.korrigiert.map(String) : []), 90000, n.gruppe ? String(n.gruppe) : undefined);
+        roh = await sitzung.fragen(pruefText, 90000, gruppe);
       } catch (e) {
         if (e.verworfen) return { fehler: [], verworfen: true }; // neuere Fassung desselben Satzes wartet schon
         throw e;
       }
-      const erg = lernen.antwortAuswerten(roh, String(n.satz || ''), n.einzeilig === true);
+      const erg = lernen.antwortAuswerten(roh, satz, n.einzeilig === true);
+      // Gegenprüfung: Satz mit allen Vorschlägen als Ganzes lesen lassen, bevor etwas angezeigt wird.
+      if (erg.fehler.length && !sitzung.wartet(gruppe)) {
+        try {
+          const roh2 = await sitzung.fragen(prompt.gegenpruefNachricht(pruefText, erg.fehler, einsetzen(satz, erg.fehler)), 90000, undefined, true);
+          const vorher = erg.fehler.map(f => f.wort + '>' + f.vorschlag).join('|');
+          erg.fehler = lernen.antwortAuswerten(roh2, satz, n.einzeilig === true).fehler;
+          const nachher = erg.fehler.map(f => f.wort + '>' + f.vorschlag).join('|');
+          if (vorher !== nachher) log('Gegenprüfung änderte:', vorher, '=>', nachher);
+        } catch (e) {
+          log('Gegenprüfung fehlgeschlagen, erste Antwort bleibt:', e.message);
+        }
+      }
       lernen.journal({ art: 'geprueft', satz: n.satz, nachkontrolle: Array.isArray(n.korrigiert) || undefined, fehler: erg.fehler.map(f => ({ wort: f.wort, vorschlag: f.vorschlag, typ: f.typ })), satz_vorschlag: erg.satz_vorschlag });
       return erg;
     }
