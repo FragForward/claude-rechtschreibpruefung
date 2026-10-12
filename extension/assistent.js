@@ -21,11 +21,10 @@ function fehler(text) {
 }
 
 /** Wortweiser Vergleich: gestrichen rot, neu grün. */
-function vergleich(alt, neu) {
+function vergleich(alt, neu, box = $('vergleich')) {
   const a = alt.split(/(\s+)/), b = neu.split(/(\s+)/), n = a.length, m = b.length;
   const t = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) t[i][j] = a[i] === b[j] ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
-  const box = $('vergleich');
   box.replaceChildren();
   const teil = (tag, text) => { const e = document.createElement(tag); e.textContent = text; box.appendChild(e); };
   let i = 0, j = 0;
@@ -83,10 +82,8 @@ function pruefungZeigen(a) {
     if (h.neu) {
       const v = document.createElement('div');
       v.className = 'vergleich';
-      if (h.alt) { const d = document.createElement('del'); d.textContent = h.alt; v.append(d, document.createTextNode('  ')); }
-      const i = document.createElement('ins');
-      i.textContent = h.neu;
-      v.appendChild(i);
+      if (h.alt) vergleich(h.alt, h.neu, v);
+      else { const i = document.createElement('ins'); i.textContent = h.neu; v.appendChild(i); }
       const knoepfe = document.createElement('div');
       knoepfe.className = 'knoepfe';
       const b = document.createElement('button');
