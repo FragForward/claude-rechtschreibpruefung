@@ -29,7 +29,7 @@ Gib nur den Ersatz für den markierten Text zurück.
 ${ZEILEN}
 Antwortformat: {"text":"...","hinweis":"ein Satz, was du geändert hast"}`,
   pruefen: `AUFGABE: Prüfe den Entwurf vor dem Absenden inhaltlich: Beantwortet er alle Fragen und Punkte der ursprünglichen Mail? Passt der Ton? Gibt es Missverständliches, Widersprüche, fehlende Angaben (Termin, Ort, erwähnter Anhang) oder sprachliche Fehler?
-Jeder Hinweis kann eine konkrete Änderung haben: "alt" ist ein Ausschnitt exakt aus dem Entwurf, "neu" sein Ersatz. Für einen fehlenden Punkt: "alt" = der Satz im Entwurf, nach dem ergänzt werden soll (vor Gruß und Namen), "neu" = derselbe Satz plus die Ergänzung.
+Jeder Hinweis kann eine konkrete Änderung haben: "alt" ist ein kurzer Ausschnitt Zeichen für Zeichen aus dem Entwurf kopiert (möglichst innerhalb einer Zeile), "neu" sein Ersatz. Für einen fehlenden Punkt: "alt" = der Satz im Entwurf, nach dem ergänzt werden soll (vor Gruß und Namen), "neu" = derselbe Satz plus die Ergänzung.
 Antwortformat: {"fazit":"ein Satz Gesamturteil","hinweise":[{"titel":"kurz","text":"Erklärung","alt":"","neu":""}]}`,
 };
 

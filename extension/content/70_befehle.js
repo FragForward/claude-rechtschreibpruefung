@@ -20,6 +20,25 @@ function rspMarkierungFinden() {
   return pos >= 0 ? { ...m, von: pos, bis: pos + m.text.length } : null;
 }
 
+/**
+ * Sucht einen von Claude zitierten Ausschnitt im Text. Leerraum (auch geschützte Leerzeichen, Umbrüche),
+ * Bindestriche, Anführungszeichen und Groß-/Kleinschreibung dürfen abweichen (12.10.2026).
+ */
+function rspStelleFinden(text, alt) {
+  const exakt = text.indexOf(alt);
+  if (exakt >= 0) return { von: exakt, bis: exakt + alt.length };
+  // Leerraum und Bindestriche sind untereinander austauschbar ("SEO Optimierung" / "SEO-Optimierung").
+  const trenner = '[\\s\\u00a0\\u00ad\\-\\u2010-\\u2014]+';
+  const muster = alt.trim().split(/[\s\u00a0\u00ad\-\u2010-\u2014]+/).map(teil => teil.split('').map(c => {
+    if (/["\u201c-\u201e\u00ab\u00bb]/.test(c)) return '["\\u201c-\\u201e\\u00ab\\u00bb]';
+    if (/['\u2018-\u201a]/.test(c)) return "['\\u2018-\\u201a]";
+    return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }).join('')).join(trenner);
+  if (!muster) return null;
+  const m = new RegExp(muster, 'iu').exec(text);
+  return m ? { von: m.index, bis: m.index + m[0].length } : null;
+}
+
 /** Antwort nach dem Einsetzen, das in Lexical-Editoren verzögert abläuft. */
 function rspEingesetzt(p, ergebnis) {
   return Promise.resolve(ergebnis).then(() => { p.planen(300); return { ok: true }; });
@@ -45,9 +64,9 @@ rspHoeren(n => {
     case 'ausschnitt_ersetzen': {
       const b = p.modell.eigenerBereich();
       if (!n.alt) return rspEingesetzt(p, p.modell.einsetzen(b.ende, b.ende, (b.ende > b.start ? '\n\n' : '') + n.neu));
-      const pos = b.text.indexOf(n.alt);
-      if (pos < 0) return { ok: false, fehler: 'Stelle im Text nicht gefunden' };
-      return rspEingesetzt(p, p.modell.einsetzen(b.start + pos, b.start + pos + n.alt.length, n.neu));
+      const st = rspStelleFinden(b.text, n.alt);
+      if (!st) return { ok: false, fehler: 'Stelle im Text nicht gefunden' };
+      return rspEingesetzt(p, p.modell.einsetzen(b.start + st.von, b.start + st.bis, n.neu));
     }
     case 'schalten':
       p.schalten(n.an);
