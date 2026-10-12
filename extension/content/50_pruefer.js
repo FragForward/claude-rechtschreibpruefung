@@ -252,12 +252,12 @@ class RspPruefer {
     if (pos < 0) return;
     const von = s.start + pos, bis = von + f.wort.length;
     const cursor = this.modell.cursor();
-    // Restliche Befunde übernehmen; ist nichts mehr offen, wird der Satz nachkontrolliert.
+    // Restliche Befunde übernehmen; wurde eine Alternative gewählt, wird der fertige Satz nachkontrolliert.
     const alt = this.eintrag(d.satz);
     const neuerSatz = s.text.slice(0, pos) + neu + s.text.slice(pos + f.wort.length);
     if (alt) {
       const rest = alt.fehler.filter(x => x !== f).map(x => (x.wort === f.wort && x.nr > f.nr ? { ...x, nr: x.nr - 1 } : x));
-      this.uebertragen(d.satz, neuerSatz, rest, [f.wort + ' -> ' + neu]);
+      this.uebertragen(d.satz, neuerSatz, rest, neu === f.vorschlag ? [] : [f.wort + ' -> ' + neu]);
     }
     if (!(await this.modell.ersetzen(von, bis, neu))) return;
     if (cursor >= 0 && (cursor < von || cursor > bis)) {

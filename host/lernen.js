@@ -92,11 +92,8 @@ class Lernen {
 
   /** Wandelt Claudes Antwort in eine bereinigte Fehlerliste. */
   antwortAuswerten(roh, satz, ohneSatzende) {
-    let daten = { fehler: [] };
-    const a = roh.indexOf('{'), b = roh.lastIndexOf('}');
-    if (a >= 0 && b > a) {
-      try { daten = JSON.parse(roh.slice(a, b + 1)); } catch (e) { log('Antwort kein JSON:', roh.slice(0, 300)); }
-    }
+    const daten = letztesJson(roh) || { fehler: [] };
+    if (!daten.fehler && roh.trim()) log('Antwort kein JSON:', roh.slice(0, 300));
     const wb = new Set(this.woerterbuch().map(w => w.toLowerCase()));
     const fehler = (Array.isArray(daten.fehler) ? daten.fehler : []).filter(f =>
       f && typeof f.wort === 'string' && f.wort && satz.includes(f.wort) &&
@@ -169,6 +166,56 @@ function satzendePruefen(fehler, satz, ohneSatzende) {
   }).filter(f => f.vorschlag !== f.wort);
 }
 
+/** Letztes gültiges JSON-Objekt der Antwort; Claude korrigiert sich manchmal selbst und schickt zwei (12.10.2026). */
+function letztesJson(roh) {
+  let erg = null;
+  for (let a = roh.indexOf('{'); a >= 0; a = roh.indexOf('{', a + 1)) {
+    let tiefe = 0, inText = false;
+    for (let i = a; i < roh.length; i++) {
+      const c = roh[i];
+      if (inText) { if (c === '\\') i++; else if (c === '"') inText = false; continue; }
+      if (c === '"') inText = true;
+      else if (c === '{') tiefe++;
+      else if (c === '}' && --tiefe === 0) {
+        try { const o = JSON.parse(roh.slice(a, i + 1)); if (o && typeof o === 'object') { erg = o; a = i; } } catch (e) { /* weitersuchen */ }
+        break;
+      }
+    }
+  }
+  return erg;
+}
+
+/** Stelle des nr-ten Vorkommens als ganzes Wort, sonst des ersten Vorkommens (wie rspWortFinden der Erweiterung). */
+function wortFinden(satz, wort, nr) {
+  const buchstabe = /[\p{L}\p{N}]/u;
+  let ab = 0, gefunden = 0, erster = -1, pos;
+  while ((pos = satz.indexOf(wort, ab)) >= 0) {
+    const davor = satz[pos - 1], danach = satz[pos + wort.length];
+    const links = !(davor && buchstabe.test(davor) && buchstabe.test(wort[0]));
+    const rechts = !(danach && buchstabe.test(danach) && buchstabe.test(wort[wort.length - 1]));
+    if (links && rechts) {
+      gefunden++;
+      if (erster < 0) erster = pos;
+      if (gefunden === (nr || 1)) return pos;
+    }
+    ab = pos + 1;
+  }
+  return erster >= 0 ? erster : satz.indexOf(wort);
+}
+
+/** Setzt alle Hauptvorschläge in den Satz ein, von hinten nach vorn; überlappende Stellen werden übersprungen. */
+function einsetzen(satz, fehler) {
+  const stellen = fehler.map(f => ({ f, pos: wortFinden(satz, f.wort, f.nr) }))
+    .filter(x => x.pos >= 0).sort((a, b) => b.pos - a.pos);
+  let erg = satz, grenze = Infinity;
+  for (const { f, pos } of stellen) {
+    if (pos + f.wort.length > grenze) continue;
+    erg = erg.slice(0, pos) + f.vorschlag + erg.slice(pos + f.wort.length);
+    grenze = pos;
+  }
+  return erg;
+}
+
 /** Zwei Befunde für dieselbe Stelle zu einem machen, z. B. "alex" -> "Alex" und "alex" -> "alex." ergibt "Alex.". */
 function zusammenfassen(fehler) {
   const erg = [];
@@ -186,4 +233,4 @@ function zusammenfassen(fehler) {
   return erg;
 }
 
-module.exports = { Lernen };
+module.exports = { Lernen, einsetzen };

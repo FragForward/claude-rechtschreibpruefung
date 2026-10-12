@@ -34,8 +34,8 @@ Object.assign(RspPruefer.prototype, {
   },
 
   /**
-   * Restbefunde auf den geänderten Satz übertragen. Ist im fertigen Satz nichts mehr offen, wird er
-   * mit den übernommenen Änderungen als Ganzes nachkontrolliert (Wunsch 12.10.2026).
+   * Restbefunde auf den geänderten Satz übertragen. Ist nichts mehr offen und wurden Alternativen statt der
+   * gegengeprüften Hauptvorschläge gewählt (aenderungen), wird der Satz als Ganzes nachkontrolliert.
    */
   uebertragen(altSatz, neuerSatz, rest, aenderungen) {
     const voll = this.cache.get(altSatz);
@@ -102,7 +102,7 @@ Object.assign(RspPruefer.prototype, {
     }
     if (!plan.length) return;
     // Vormerken: Restbefunde übernehmen oder den fertigen Satz nachkontrollieren.
-    this.uebertragen(satzText, neuerSatz, e.fehler.filter(f => !plan.some(x => x.f === f)), plan.map(x => x.f.wort + ' -> ' + x.neu));
+    this.uebertragen(satzText, neuerSatz, e.fehler.filter(f => !plan.some(x => x.f === f)), plan.filter(x => x.neu !== x.f.vorschlag).map(x => x.f.wort + ' -> ' + x.neu));
     const von = Math.min(...plan.map(x => x.pos));
     const bis = Math.max(...plan.map(x => x.pos + x.f.wort.length));
     const ersatz = neuerSatz.slice(von, bis + neuerSatz.length - s.text.length);
