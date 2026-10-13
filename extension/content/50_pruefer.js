@@ -89,7 +89,7 @@ class RspPruefer {
     // Der Satz am Cursor zuerst, dann nach Abstand: die Schlange im Host arbeitet der Reihe nach.
     const abstand = s => (c < 0 ? 0 : c < s.start ? s.start - c : c > s.ende ? c - s.ende : -1);
     for (const s of [...this.saetze].sort((a, b) => abstand(a) - abstand(b))) {
-      if (s.text.length < 4) continue;
+      if (s.text.trim().length < 2 || !/\p{L}/u.test(s.text)) continue; // kurze Zeilen wie "hi," zählen (13.10.2026)
       // Ein Satz mit Satzzeichen ist fertig, sobald das Zeichen gesetzt ist (Cursor direkt dahinter zählt nicht als "drin").
       // Ohne Satzzeichen ist er der letzte der Zeile; der Cursor hinter einem gerade getippten Leerzeichen gehört noch dazu.
       const drin = !this.alleFertig && c >= s.start && (s.abgeschlossen ? c < s.ende : c <= s.absatzBis);
