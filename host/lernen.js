@@ -94,12 +94,16 @@ class Lernen {
   antwortAuswerten(roh, satz, ohneSatzende) {
     const daten = letztesJson(roh) || { fehler: [] };
     if (!daten.fehler && roh.trim()) log('Antwort kein JSON:', roh.slice(0, 300));
-    const wb = new Set(this.woerterbuch().map(w => w.toLowerCase()));
-    const fehler = (Array.isArray(daten.fehler) ? daten.fehler : []).filter(f =>
+    // Wörterbuch gibt die Schreibung samt Groß-/Kleinschreibung vor: "Lg" -> "lg", wenn "lg" drinsteht (13.10.2026).
+    const wb = new Map(this.woerterbuch().map(w => [w.toLowerCase(), w]));
+    const fehler = (Array.isArray(daten.fehler) ? daten.fehler : []).map(f => {
+      const form = f && typeof f.wort === 'string' && wb.get(f.wort.toLowerCase());
+      if (!form || typeof f.vorschlag !== 'string') return f;
+      if (f.vorschlag.toLowerCase() !== f.wort.toLowerCase()) return null;
+      return { ...f, vorschlag: form, alternativen: [] };
+    }).filter(f =>
       f && typeof f.wort === 'string' && f.wort && satz.includes(f.wort) &&
-      typeof f.vorschlag === 'string' && f.vorschlag !== f.wort &&
-      // Wörterbuch schützt die Schreibung, nicht die Groß-/Kleinschreibung ("Lg" -> "LG"; 13.10.2026).
-      !(wb.has(f.wort.toLowerCase()) && f.vorschlag.toLowerCase() !== f.wort.toLowerCase())
+      typeof f.vorschlag === 'string' && f.vorschlag !== f.wort
     ).map(f => ({
       wort: f.wort,
       nr: Number.isInteger(f.nr) && f.nr > 0 ? f.nr : 1,
