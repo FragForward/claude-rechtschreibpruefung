@@ -41,8 +41,8 @@ if ($code -ne 0) { throw "Signieren fehlgeschlagen (Code $code)" }
 
 # Veroeffentlichen: .xpi als GitHub-Release, updates.json im Zweig firefox-aktualisierung.
 # Firefox fragt die update_url aus manifest.firefox.json etwa einmal am Tag ab (13.10.2026).
-$repo = 'Continue' # gh meldet 'nicht gefunden' ueber stderr
- = 'FragForward/claude-rechtschreibpruefung'
+$ErrorActionPreference = 'Continue' # gh meldet "nicht gefunden" ueber stderr
+$repo = 'FragForward/claude-rechtschreibpruefung'
 $zweig = 'firefox-aktualisierung'
 $signiert = Get-ChildItem $ziel -Filter "*-$version.xpi" | Sort-Object LastWriteTime | Select-Object -Last 1
 if (-not $signiert) { throw "Signierte Datei fuer $version nicht gefunden" }
