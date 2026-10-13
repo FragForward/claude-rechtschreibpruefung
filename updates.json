@@ -1,0 +1,12 @@
+{
+    "addons":  {
+                   "rechtschreibpruefung@lokal":  {
+                                                      "updates":  [
+                                                                      {
+                                                                          "version":  "0.6.0",
+                                                                          "update_link":  "https://github.com/FragForward/claude-rechtschreibpruefung/releases/download/v0.6.0/rechtschreibpruefung-firefox-0.6.0.xpi"
+                                                                      }
+                                                                  ]
+                                                  }
+               }
+}
