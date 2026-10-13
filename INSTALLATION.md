@@ -80,6 +80,8 @@ Normales Firefox installiert dauerhaft nur von Mozilla signierte Erweiterungen.
 
   Die Schlüssel werden beim ersten Lauf abgefragt und auf Wunsch in `%USERPROFILE%\.claude\secrets\mozilla-amo.env` abgelegt. Die signierte Datei in `dist\signiert` über `about:addons` > Zahnrad > "Add-on aus Datei installieren" einspielen.
 
+  **Aktualisierung:** `signieren.ps1` veröffentlicht jede signierte Version als GitHub-Release und trägt sie in `updates.json` (Zweig `firefox-aktualisierung`) ein. Firefox fragt diese Adresse (`update_url` im Firefox-Manifest) etwa einmal am Tag ab; "Nach Updates suchen" in `about:addons` holt sie sofort. Wer mit eigener Kennung signiert, entfernt `update_url` oder setzt eine eigene Adresse.
+
 ## 5. Altus (WhatsApp)
 
 Die Einbindung in den WhatsApp-Client Altus liegt im Fork https://github.com/FragForward/altus (Branch `feature/rechtschreibpruefung`). Altus findet das Hilfsprogramm über die Chrome-Anmeldung aus Schritt 1 und liest den Prüfcode bei jedem Start aus `dist\chrome\content.js`.

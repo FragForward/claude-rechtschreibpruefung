@@ -51,7 +51,7 @@ Gelerntes liegt in `daten/` im Haupt-Checkout (nicht im Repo):
 - **Knopf "Claude"** (Thunderbird: Verfassen-Leiste, Chrome/Firefox: Symbolleiste): Status (… prüft, Zahl offen, Haken fertig, AUS), Prüfung ein/aus, Text schreiben, verbessern, prüfen.
 - **Rechtsklick auf markierten Text**: "Mit Claude verbessern".
 - **Lernen**: Nach 10 Minuten ohne Schreiben wertet die Sitzung das Journal aus und aktualisiert `schreibprofil.md` (bei zwei Browsern nur einer, Sperrdatei).
-- **Selbstaktualisierung**: Nach `bauen.ps1` lädt sich die Erweiterung innerhalb von 30 s neu (Thunderbird: nur ohne offene Mail, Chrome/Firefox: nach 2 Minuten ohne Schreiben).
+- **Selbstaktualisierung**: Nach `bauen.ps1` lädt sich die Erweiterung innerhalb von 30 s neu (Thunderbird: nur ohne offene Mail, Chrome und entpacktes Firefox: nach 2 Minuten ohne Schreiben). Signiertes Firefox ab 0.6.0 holt neue Versionen über GitHub (`signieren.ps1` veröffentlicht sie).
 
 ## Installation
 
