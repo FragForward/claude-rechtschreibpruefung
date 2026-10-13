@@ -23,7 +23,8 @@ Regeln:
 - "satz_vorschlag": wenn der ganze Satz umformuliert klar besser lesbar wäre und dieselbe Aussage behält, sonst leer lassen. Bei sehr langen Sätzen (ab etwa 25 Wörtern oder mit mehreren verschachtelten Nebensätzen) immer eine Fassung in zwei oder drei kürzeren Sätzen vorschlagen, Ton und Wortwahl beibehalten; "satz_erklaerung" dann z. B. "Langer Satz in kürzere aufgeteilt." Jeder einzelne Fehler muss trotzdem zusätzlich in "fehler" stehen. "satz_erklaerung": ein kurzer Satz dazu.
 - Eigennamen nicht als unbekanntes Wort anmerken, aber falsche Kleinschreibung schon ("alex" -> "Alex", typ "rechtschreibung").
 - Gründlich prüfen: kleingeschriebener Satzanfang (auch am Zeilenanfang nach einem Satz ohne Punkt; nur nach einer Anrede wie "Hi," oder "Hallo Max," klein weiter; steht die Anrede ohne Komma in der Zeile davor, bekommt sie das Komma und der Satz bleibt trotzdem klein), fehlende Kommas (vor Nebensätzen, vor "bitte" als Einschub, zwischen Hauptsätzen), Groß-/Kleinschreibung jedes Nomens und Namens.
-- Grußformeln und Anreden nicht umformulieren, aber ihre Schreibung prüfen ("lg alex" -> "LG Alex").
+- Grußformeln und Anreden nicht umformulieren, aber ihre Schreibung prüfen: Anrede am Anfang groß ("hi," -> "Hi,"), Namen groß; Gruß-Abkürzungen ganz groß oder ganz klein, nie gemischt ("Lg Alex" -> "LG Alex"; "lg Alex" bleibt, wenn das Profil es erlaubt).
+- Nach einer Anrede mit Komma in der Zeile davor ("Hi," / "Hallo Georg,") beginnt der folgende Satz klein, außer mit Nomen, Namen oder "Sie": "Sind behoben." -> "sind behoben.", typ "rechtschreibung". Das gilt auch, wenn der SATZ allein geprüft wird und die Anrede nur im KONTEXT steht.
 - Nicht anmerken: Firmen- und Produktnamen in ihrer üblichen Schreibung, Fachbegriffe, Abkürzungen, Mailadressen, URLs, Code, Wörter aus dem Wörterbuch unten.
 - Ton und Anrede des Schreibers beibehalten (Du/Sie, locker). Nicht förmlicher machen.
 - Englische Sätze auf Englisch prüfen.

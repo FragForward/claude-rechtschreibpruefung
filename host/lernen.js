@@ -98,7 +98,8 @@ class Lernen {
     const fehler = (Array.isArray(daten.fehler) ? daten.fehler : []).filter(f =>
       f && typeof f.wort === 'string' && f.wort && satz.includes(f.wort) &&
       typeof f.vorschlag === 'string' && f.vorschlag !== f.wort &&
-      !(wb.has(f.wort.toLowerCase()))
+      // Wörterbuch schützt die Schreibung, nicht die Groß-/Kleinschreibung ("Lg" -> "LG"; 13.10.2026).
+      !(wb.has(f.wort.toLowerCase()) && f.vorschlag.toLowerCase() !== f.wort.toLowerCase())
     ).map(f => ({
       wort: f.wort,
       nr: Number.isInteger(f.nr) && f.nr > 0 ? f.nr : 1,
