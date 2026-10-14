@@ -35,6 +35,7 @@ const assistentSitzung = new Sitzung({
   systemPrompt: () => assistent.systemPrompt(lernen.profil()),
 });
 let auswertungLaeuft = false;
+const AUSWERTUNG_MIN_EINTRAEGE = 15;
 
 // --- Native Messaging: 4 Byte Länge (LE) + UTF-8-JSON ---
 let puffer = Buffer.alloc(0);
@@ -147,18 +148,34 @@ async function bearbeiten(n) {
     }
 
     case 'auswerten':
-      return auswerten();
+      return auswerten(true); // ausdrücklich angefordert: auch mit wenigen Einträgen
 
     default:
       throw new Error('Unbekannte Anfrage: ' + n.art);
   }
 }
 
-/** Lässt die Sitzung das Protokoll auswerten, speichert das neue Profil und startet frisch damit. */
-async function auswerten() {
+/** Profil aus der Antwort; zu lange Profile lässt dieselbe Sitzung einmal kürzen. */
+async function profilAusAntwort(s, antwort) {
+  const m = /<profil>([\s\S]*?)<\/profil>/.exec(antwort);
+  if (!m || !m[1].trim()) throw new Error('Auswertung lieferte kein Profil');
+  let profil = m[1].trim();
+  if (profil.length > prompt.PROFIL_MAX_ZEICHEN * 1.2) {
+    log('Profil zu lang (' + profil.length + ' Zeichen), wird gekürzt');
+    const k = /<profil>([\s\S]*?)<\/profil>/.exec(await s.fragen(prompt.kuerzenNachricht(profil), 180000));
+    if (k && k[1].trim() && k[1].trim().length < profil.length) profil = k[1].trim();
+  }
+  return profil;
+}
+
+/**
+ * Wertet das Protokoll in einer eigenen, kurzlebigen Sitzung aus, damit die Prüfung nicht wartet,
+ * und erst ab einigen Einträgen (14.10.2026: 20 Auswertungen am Tag, je über eine Minute).
+ */
+async function auswerten(sofort = false) {
   if (auswertungLaeuft) return { laeuft: true };
   const eintraege = lernen.journalLesen();
-  if (!eintraege.length) return { nichts: true };
+  if (!eintraege.length || (!sofort && eintraege.length < AUSWERTUNG_MIN_EINTRAEGE)) return { nichts: true };
   // Thunderbird und Chrome haben je einen Host; nur einer wertet aus.
   const sperre = path.join(DATEN, 'auswertung.sperre');
   try { if (Date.now() - fs.statSync(sperre).mtimeMs < 600000) return { laeuft: true }; } catch (e) { /* keine Sperre */ }
@@ -166,12 +183,20 @@ async function auswerten() {
   auswertungLaeuft = true;
   try {
     log('Auswertung startet mit', eintraege.length, 'Einträgen');
-    const antwort = await sitzung.fragen(prompt.auswertungsNachricht(lernen.profil(), eintraege.slice(-400)), 180000);
-    const m = /<profil>([\s\S]*?)<\/profil>/.exec(antwort);
-    if (!m || !m[1].trim()) throw new Error('Auswertung lieferte kein Profil');
-    lernen.profilSpeichern(m[1]);
+    const s = new Sitzung({
+      arbeitsOrdner: path.join(DATEN, 'auswertung'),
+      modell: () => lernen.einstellungen().modell,
+      systemPrompt: () => prompt.AUSWERTUNG_SYSTEM,
+    });
+    let profil;
+    try {
+      profil = await profilAusAntwort(s, await s.fragen(prompt.auswertungsNachricht(lernen.profil(), eintraege.slice(-400)), 240000));
+    } finally {
+      s.beenden();
+    }
+    lernen.profilSpeichern(profil);
     lernen.journalKuerzen(eintraege.length);
-    log('Profil aktualisiert');
+    log('Profil aktualisiert,', profil.length, 'Zeichen');
     sitzung.neustarten();
     if (assistentSitzung.bereit) assistentSitzung.neustarten();
     return { profil: lernen.profil() };
