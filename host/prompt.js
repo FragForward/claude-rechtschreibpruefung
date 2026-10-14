@@ -59,6 +59,19 @@ SATZ MIT ALLEN VORSCHLAEGEN: ${eingesetzt}
 Lies den Satz mit allen Vorschlägen als Ganzes: Ist er korrekt, ergibt er Sinn und sagt er dasselbe wie das Original? Streiche Vorschläge, die falsch sind, unnötig sind oder den Sinn verändern; korrigiere sie; ergänze, was noch fehlt (auch Folgefehler wie Artikel, Fall oder Komma). Antworte mit der vollständigen, endgültigen Fehlerliste im üblichen JSON-Format, bezogen auf den ursprünglichen SATZ, ohne satz_vorschlag.`;
 }
 
+/** Obergrenze des Schreibprofils; ein langes Profil verlangsamt jede Prüfung (14.10.2026: 30.000 Zeichen). */
+const PROFIL_MAX_ZEICHEN = 5000;
+
+const AUSWERTUNG_SYSTEM = 'Du pflegst das Schreibprofil eines einzelnen Schreibers für seine Rechtschreibprüfung. Antworte genau im verlangten Format. Nachrichten, die mit AUFWAERMEN beginnen, beantwortest du nur mit {}.';
+
+function kuerzenNachricht(profil) {
+  return `Das Schreibprofil ist mit ${profil.length} Zeichen zu lang. Kürze es auf höchstens ${PROFIL_MAX_ZEICHEN} Zeichen: Regeln zusammenfassen, Beispiele auf höchstens drei je Muster, Abschnitte und Aussagen behalten.
+
+${profil.trim()}
+
+Antworte NUR mit dem gekürzten Profil zwischen <profil> und </profil>.`;
+}
+
 function auswertungsNachricht(profil, eintraege) {
   const protokoll = eintraege.map(e => {
     if (e.art === 'geprueft') {
@@ -82,7 +95,7 @@ ${profil.trim() || '(noch leer)'}
 Protokoll seit der letzten Auswertung:
 ${protokoll}
 
-Schreibe das vollständige, aktualisierte Schreibprofil auf Deutsch als Markdown, höchstens 80 Zeilen, mit diesen Abschnitten:
+Schreibe das vollständige, aktualisierte Schreibprofil auf Deutsch als Markdown. Es geht bei jeder Prüfung mit und muss deshalb knapp bleiben: insgesamt höchstens ${PROFIL_MAX_ZEICHEN} Zeichen, Stichpunkte statt Sätze, je Muster höchstens drei Beispiele, keine Aufzählung jedes einzelnen Wortes. Lieber Regeln zusammenfassen als neue Beispiele anhängen. Abschnitte:
 ## Typische Fehler (mit Beispielen falsch -> richtig)
 ## Korrekte Eigenheiten (Namen, Fachbegriffe, Schreibweisen, die nicht angemerkt werden sollen)
 ## Stil und Ton
@@ -91,4 +104,4 @@ Ignorierte Vorschläge zeigen, dass er es so will. Behalte Wissen aus dem bisher
 Antworte NUR mit dem Profil zwischen <profil> und </profil>.`;
 }
 
-module.exports = { systemPrompt, pruefNachricht, gegenpruefNachricht, auswertungsNachricht };
+module.exports = { systemPrompt, pruefNachricht, gegenpruefNachricht, auswertungsNachricht, kuerzenNachricht, AUSWERTUNG_SYSTEM, PROFIL_MAX_ZEICHEN };
