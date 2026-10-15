@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { log, logStarten } = require('./log');
 const { Sitzung } = require('./sitzung');
-const { Lernen, einsetzen } = require('./lernen');
+const { Lernen, einsetzen, letztesJson } = require('./lernen');
 const prompt = require('./prompt');
 const assistent = require('./assistent');
 
@@ -92,8 +92,20 @@ async function bearbeiten(n) {
           log('Gegenprüfung fehlgeschlagen, erste Antwort bleibt:', e.message);
         }
       }
+      // Satzfassung, die nur die Einzelkorrekturen wiederholt, bietet nichts Neues.
+      if (erg.satz_vorschlag && erg.satz_vorschlag.trim() === einsetzen(satz, erg.fehler).trim()) erg.satz_vorschlag = '';
       lernen.journal({ art: 'geprueft', satz: n.satz, nachkontrolle: Array.isArray(n.korrigiert) || undefined, fehler: erg.fehler.map(f => ({ wort: f.wort, vorschlag: f.vorschlag, typ: f.typ })), satz_vorschlag: erg.satz_vorschlag });
       return erg;
+    }
+
+    case 'absatz': {
+      lernen.aktivitaet();
+      const text = String(n.text || '').slice(0, 3000);
+      const roh = await sitzung.fragen(prompt.absatzNachricht(text), 120000, 'absatz:' + text.slice(0, 40));
+      const d = letztesJson(roh) || {};
+      const vorschlag = typeof d.vorschlag === 'string' ? d.vorschlag.trim() : '';
+      if (vorschlag && vorschlag !== text) lernen.journal({ art: 'geprueft', satz: text, fehler: [], satz_vorschlag: vorschlag });
+      return { vorschlag: vorschlag !== text ? vorschlag : '', erklaerung: typeof d.erklaerung === 'string' ? d.erklaerung : '' };
     }
 
     case 'aktion':

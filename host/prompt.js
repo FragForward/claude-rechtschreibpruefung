@@ -20,7 +20,7 @@ Regeln:
 - Ändere nie die Aussage oder den Inhalt. Was grammatisch korrekt ist, ist kein Fehler, auch wenn man es anders sagen könnte.
 - "erklaerung": höchstens 5 Wörter, auf Deutsch; bei offensichtlichen Tippfehlern leer lassen. Antworte knapp, jeder Befund genau einmal.
 - "eindeutig": true nur, wenn "wort" in keinem Zusammenhang ein korrektes Wort ist (reiner Tippfehler wie "isth" oder "müßen"). Bei "das"/"dass", "seid"/"seit" usw. immer false.
-- "satz_vorschlag": wenn der ganze Satz umformuliert klar besser lesbar wäre und dieselbe Aussage behält, sonst leer lassen. Bei sehr langen Sätzen (ab etwa 25 Wörtern oder mit mehreren verschachtelten Nebensätzen) immer eine Fassung in zwei oder drei kürzeren Sätzen vorschlagen, Ton und Wortwahl beibehalten; "satz_erklaerung" dann z. B. "Langer Satz in kürzere aufgeteilt." Jeder einzelne Fehler muss trotzdem zusätzlich in "fehler" stehen. "satz_erklaerung": ein kurzer Satz dazu.
+- "satz_vorschlag": Hat der Satz Fehler, immer den ganzen Satz in einer korrigierten, flüssig formulierten Fassung angeben: alle Korrekturen eingearbeitet und darüber hinaus so formuliert, wie man es gut schreiben würde: natürliche Wortstellung (nachgeschobene Satzteile einordnen, im Nebensatz das Verb ans Ende), Füllwörter und Doppelungen weg, holprige Stellen glätten, sehr lange Sätze teilen. Bringt das gegenüber den Einzelkorrekturen nichts, leer lassen. Ohne Fehler nur, wenn er umformuliert klar besser lesbar wäre. Gleiche Aussage, gleicher Ton, keine neuen Inhalte. Bei sehr langen Sätzen (ab etwa 25 Wörtern oder mit mehreren verschachtelten Nebensätzen) immer eine Fassung in zwei oder drei kürzeren Sätzen vorschlagen, Ton und Wortwahl beibehalten; "satz_erklaerung" dann z. B. "Langer Satz in kürzere aufgeteilt." Jeder einzelne Fehler muss trotzdem zusätzlich in "fehler" stehen. "satz_erklaerung": ein kurzer Satz, was die Fassung besser macht.
 - Eigennamen nicht als unbekanntes Wort anmerken, aber falsche Kleinschreibung schon ("alex" -> "Alex", typ "rechtschreibung").
 - Gründlich prüfen: kleingeschriebener Satzanfang (auch am Zeilenanfang nach einem Satz ohne Punkt; nur nach einer Anrede wie "Hi," oder "Hallo Max," klein weiter; steht die Anrede ohne Komma in der Zeile davor, bekommt sie das Komma und der Satz bleibt trotzdem klein), fehlende Kommas (vor Nebensätzen, vor "bitte" als Einschub, zwischen Hauptsätzen), Groß-/Kleinschreibung jedes Nomens und Namens.
 - Grußformeln und Anreden nicht umformulieren, aber ihre Schreibung prüfen: Anrede am Anfang groß ("hi," -> "Hi,"), Namen groß; Gruß-Abkürzungen so, wie sie im Wörterbuch stehen (steht dort "lg": "Lg Alex" -> "lg Alex"), sonst ganz groß; nie gemischt.
@@ -30,7 +30,7 @@ Regeln:
 - Englische Sätze auf Englisch prüfen.
 - Keine Fehler: {"fehler":[]}
 
-Ausnahmen: Nachrichten, die mit AUFWAERMEN, AUSWERTUNG oder GEGENPRUEFUNG beginnen, beantwortest du so, wie es dort verlangt wird.`;
+Ausnahmen: Nachrichten, die mit AUFWAERMEN, AUSWERTUNG, GEGENPRUEFUNG oder ABSATZ beginnen, beantwortest du so, wie es dort verlangt wird.`;
 
 function systemPrompt(profil, woerterbuch) {
   let text = GRUND;
@@ -57,6 +57,15 @@ ${pruefText}
 DEINE VORSCHLAEGE: ${liste}
 SATZ MIT ALLEN VORSCHLAEGEN: ${eingesetzt}
 Lies den Satz mit allen Vorschlägen als Ganzes: Ist er korrekt, ergibt er Sinn und sagt er dasselbe wie das Original? Streiche Vorschläge, die falsch sind, unnötig sind oder den Sinn verändern; korrigiere sie; ergänze, was noch fehlt (auch Folgefehler wie Artikel, Fall oder Komma). Antworte mit der vollständigen, endgültigen Fehlerliste im üblichen JSON-Format, bezogen auf den ursprünglichen SATZ, ohne satz_vorschlag.`;
+}
+
+/** Durchsicht eines fehlerfreien Absatzes als Ganzes (Wunsch 15.10.2026). */
+function absatzNachricht(text) {
+  return `ABSATZ: Der folgende Absatz ist bereits korrigiert. Lies ihn als Ganzes: Würde er umformuliert deutlich besser lesbar (zu lange oder verschachtelte Sätze, umständliche Formulierungen, Wiederholungen, unklare Bezüge, holprige Reihenfolge)?
+Dann antworte {"vorschlag":"der ganze Absatz neu","erklaerung":"höchstens 8 Wörter, was besser ist"}, sonst {"vorschlag":""}.
+Aussage, Inhalt, Zahlen, Namen, Ton und Anrede (Du, locker) beibehalten, nichts hinzufügen, nicht förmlicher machen. Zeilen mit Anrede oder Gruß unverändert lassen, Zeilenumbrüche nur dort, wo sie schon sind. Nicht kleinlich: Liest er sich gut, leer lassen.
+
+${text}`;
 }
 
 /** Obergrenze des Schreibprofils; ein langes Profil verlangsamt jede Prüfung (14.10.2026: 30.000 Zeichen). */
@@ -104,4 +113,4 @@ Ignorierte Vorschläge zeigen, dass er es so will. Behalte Wissen aus dem bisher
 Antworte NUR mit dem Profil zwischen <profil> und </profil>.`;
 }
 
-module.exports = { systemPrompt, pruefNachricht, gegenpruefNachricht, auswertungsNachricht, kuerzenNachricht, AUSWERTUNG_SYSTEM, PROFIL_MAX_ZEICHEN };
+module.exports = { systemPrompt, pruefNachricht, gegenpruefNachricht, absatzNachricht, auswertungsNachricht, kuerzenNachricht, AUSWERTUNG_SYSTEM, PROFIL_MAX_ZEICHEN };
