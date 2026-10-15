@@ -181,6 +181,7 @@ class RspPruefer {
       befunde++;
       eintraege.push({ art: 'wort', typ: 'grammatik', rechtecke: this.modell.rechtecke(l.von, l.bis), daten: { art: 'lokal', befund: l, schluessel } });
     }
+    this.absaetzeZeichnen(eintraege);
     this.statusMelden(befunde);
     const jetzt = Date.now();
     this.blitze = this.blitze.filter(b => b.bis > jetzt);
@@ -213,7 +214,7 @@ class RspPruefer {
     if (z.knopf) ev.preventDefault();
     const anker = z.rechtecke[z.rechtecke.length - 1];
     // Erst nach dem Klick öffnen, damit die Cursorsetzung das Popup nicht gleich wieder schließt.
-    const art = { satz: 'satzListe', lokal: 'lokalPopup', wort: 'wortPopup' }[z.daten.art];
+    const art = { satz: 'satzListe', lokal: 'lokalPopup', wort: 'wortPopup', absatz: 'absatzPopup' }[z.daten.art];
     setTimeout(() => this[art](z.daten, anker), 0);
   }
 

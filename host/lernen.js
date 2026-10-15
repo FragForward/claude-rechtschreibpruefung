@@ -238,4 +238,4 @@ function zusammenfassen(fehler) {
   return erg;
 }
 
-module.exports = { Lernen, einsetzen };
+module.exports = { Lernen, einsetzen, letztesJson };
