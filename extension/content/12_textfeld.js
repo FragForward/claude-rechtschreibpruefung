@@ -86,6 +86,10 @@ class RspTextfeldModell {
 
   cursorSetzen(pos) { this.feld.setSelectionRange(pos, pos); }
 
+  eigeneBereiche() {
+    return [this.eigenerBereich()].filter(b => b.ende > b.start);
+  }
+
   eigenerBereich() {
     this.aufbauen();
     let start = 0, ende = this.text.length;

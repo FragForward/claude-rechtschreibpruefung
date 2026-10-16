@@ -38,7 +38,9 @@ function nachricht(n) {
   if (n.betreff) teile.push('BETREFF: ' + n.betreff);
   if (n.wunsch) teile.push('WUNSCH DES SCHREIBERS: ' + n.wunsch);
   if (n.original) teile.push('URSPRÜNGLICHE MAIL (auf die geantwortet wird):\n' + String(n.original).slice(0, 12000));
-  teile.push('ENTWURF:\n' + (String(n.entwurf || '').slice(0, 12000) || '(leer)'));
+  const entwurf = String(n.entwurf || '').slice(0, 12000);
+  if (entwurf.includes('[[ZITAT]]')) teile.push('HINWEIS: Der Schreiber antwortet zwischen den Zeilen der Originalmail. [[ZITAT]] steht für zitierten Text, der dazwischen liegt. Jede Zeile [[ZITAT]] genau so und an derselben Stelle stehen lassen, keinen Text darüber hinweg verschieben; "alt" enthält nie [[ZITAT]].');
+  teile.push('ENTWURF:\n' + (entwurf || '(leer)'));
   if (n.aufgabe === 'markierung') teile.push('MARKIERTER TEXT:\n' + n.markierung);
   return teile.join('\n\n');
 }

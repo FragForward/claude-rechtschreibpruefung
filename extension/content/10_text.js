@@ -3,6 +3,8 @@
 
 const RSP_UEBERSPRINGEN = 'blockquote[type="cite"], .moz-signature, .moz-cite-prefix, .moz-forward-container, .gmail_quote, .gmail_signature, script, style, [contenteditable="false"], rsp-ebene';
 const RSP_ENDE_EIGENER_TEXT = '.moz-cite-prefix, blockquote[type="cite"], .moz-signature, .moz-forward-container, .gmail_quote, .gmail_signature';
+const RSP_ZITAT = '.moz-cite-prefix, blockquote[type="cite"], .gmail_quote';
+const RSP_SCHLUSS = '.moz-signature, .moz-forward-container, .gmail_signature';
 const RSP_BLOCK = /^(ADDRESS|ARTICLE|ASIDE|BLOCKQUOTE|DIV|DL|DT|DD|FIELDSET|FIGURE|FOOTER|FORM|H[1-6]|HEADER|HR|LI|MAIN|NAV|OL|P|PRE|SECTION|TABLE|TBODY|THEAD|TFOOT|TR|TD|TH|UL)$/;
 const RSP_ABKUERZUNGEN = new Set(['z', 'b', 'zb', 'bzw', 'ca', 'usw', 'etc', 'evtl', 'ggf', 'inkl', 'exkl', 'nr', 'tel', 'str', 'dr', 'prof', 'hr', 'fr', 'vgl', 'bspw', 'u', 'a', 'o', 'd', 'h', 's', 'v', 'e', 'i', 'abs', 'ff', 'min', 'max', 'std', 'mio', 'mrd', 'jan', 'feb', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'okt', 'nov', 'dez', 'mr', 'mrs', 'ms', 'vs', 'eg', 'ie', 'mfg', 'lg', 'vg', 'zzgl', 'gem', 'lt', 'bzgl']);
 
@@ -21,6 +23,7 @@ class RspTextModell {
    */
   aufbauen() {
     const teile = [];
+    const luecken = [];
     const fasstZusammen = new Map();
     let text = '';
     const umbruch = () => { if (text && !text.endsWith('\n')) text += '\n'; };
@@ -53,7 +56,7 @@ class RspTextModell {
           teile.push({ knoten: k, start: text.length, laenge: neu.length, karte });
           text += neu;
         } else if (k.nodeType === 1) {
-          if (k.matches(RSP_UEBERSPRINGEN)) { umbruch(); continue; }
+          if (k.matches(RSP_UEBERSPRINGEN)) { luecken.push({ pos: text.length, el: k }); umbruch(); continue; }
           if (k.nodeName === 'BR') { text += '\n'; continue; }
           const block = RSP_BLOCK.test(k.nodeName);
           if (block) umbruch();
@@ -65,6 +68,7 @@ class RspTextModell {
     gehe(this.wurzel);
     this.text = text;
     this.teile = teile;
+    this.luecken = luecken;
     return text;
   }
 
@@ -193,10 +197,30 @@ class RspTextModell {
     return { start, ende, text: this.text.slice(start, ende) };
   }
 
-  /** Zitierte Originalmail (Thunderbird oder Gmail). */
+  /**
+   * Eigene Abschnitte: Text zwischen Zitaten (Antworten zwischen den Zeilen der Originalmail; 16.10.2026).
+   * Signatur und Weiterleitung beenden den eigenen Text.
+   */
+  eigeneBereiche() {
+    this.aufbauen();
+    const schluss = this.luecken.find(l => l.el.matches(RSP_SCHLUSS));
+    const ende = schluss ? schluss.pos : this.text.length;
+    const grenzen = [0, ...this.luecken.filter(l => l.pos < ende && l.el.matches(RSP_ZITAT)).map(l => l.pos), ende];
+    const erg = [];
+    for (let i = 0; i + 1 < grenzen.length; i++) {
+      let start = grenzen[i], bis = grenzen[i + 1];
+      while (start < bis && /\s/.test(this.text[start])) start++;
+      while (bis > start && /\s/.test(this.text[bis - 1])) bis--;
+      if (bis > start) erg.push({ start, ende: bis, text: this.text.slice(start, bis) });
+    }
+    return erg;
+  }
+
+  /** Zitierte Originalmail (Thunderbird oder Gmail), bei Antworten zwischen den Zeilen alle Zitatteile. */
   original() {
-    const zitat = this.wurzel.querySelector('blockquote[type="cite"], .moz-forward-container, .gmail_quote');
-    return zitat ? zitat.innerText.trim() : '';
+    const teile = [...this.wurzel.querySelectorAll('blockquote[type="cite"], .moz-forward-container, .gmail_quote')]
+      .filter(z => !z.parentElement || !z.parentElement.closest('blockquote[type="cite"], .moz-forward-container, .gmail_quote'));
+    return teile.map(z => z.innerText.trim()).filter(Boolean).join('\n[...]\n');
   }
 
   cursorSetzen(pos) {
