@@ -39,6 +39,16 @@ function rspStelleFinden(text, alt) {
   return m ? { von: m.index, bis: m.index + m[0].length } : null;
 }
 
+// Platzhalter für zitierten Text zwischen eigenen Abschnitten; Claude lässt ihn an seiner Stelle.
+const RSP_ZITAT_MARKE = '[[ZITAT]]';
+
+/** Ersetzt die eigenen Abschnitte von hinten nach vorn, damit die Stellen davor gültig bleiben. */
+async function rspAbschnitteErsetzen(p, bereiche, text) {
+  const teile = text.split(/\s*\[\[ZITAT\]\]\s*/);
+  if (teile.length !== bereiche.length) throw new Error('Claude hat die Abschnitte zwischen den Zitaten verändert, bitte erneut versuchen');
+  for (let i = bereiche.length - 1; i >= 0; i--) await p.modell.einsetzen(bereiche[i].start, bereiche[i].ende, teile[i].trim());
+}
+
 /** Antwort nach dem Einsetzen, das in Lexical-Editoren verzögert abläuft. */
 function rspEingesetzt(p, ergebnis) {
   return Promise.resolve(ergebnis).then(() => { p.planen(300); return { ok: true }; });
@@ -50,9 +60,11 @@ rspHoeren(n => {
   if (!p) return undefined;
   switch (n.art) {
     case 'inhalt_holen':
-      return { ok: true, eigen: p.modell.eigenerBereich().text, original: p.modell.original(), markierung: rspMarkierung && rspMarkierung.p === p ? rspMarkierung.text : '' };
+      return { ok: true, eigen: p.modell.eigeneBereiche().map(b => b.text).join('\n\n' + RSP_ZITAT_MARKE + '\n\n'), original: p.modell.original(), markierung: rspMarkierung && rspMarkierung.p === p ? rspMarkierung.text : '' };
     case 'eigen_ersetzen': {
-      const b = p.modell.eigenerBereich();
+      const bereiche = p.modell.eigeneBereiche();
+      if (bereiche.length > 1) return rspEingesetzt(p, rspAbschnitteErsetzen(p, bereiche, n.text)).catch(e => ({ ok: false, fehler: e.message }));
+      const b = bereiche[0] || p.modell.eigenerBereich();
       return rspEingesetzt(p, p.modell.einsetzen(b.start, b.ende, n.text));
     }
     case 'markierung_ersetzen': {
@@ -62,11 +74,16 @@ rspHoeren(n => {
       return rspEingesetzt(m.p, m.p.modell.einsetzen(m.von, m.bis, n.text));
     }
     case 'ausschnitt_ersetzen': {
-      const b = p.modell.eigenerBereich();
-      if (!n.alt) return rspEingesetzt(p, p.modell.einsetzen(b.ende, b.ende, (b.ende > b.start ? '\n\n' : '') + n.neu));
-      const st = rspStelleFinden(b.text, n.alt);
-      if (!st) return { ok: false, fehler: 'Stelle im Text nicht gefunden' };
-      return rspEingesetzt(p, p.modell.einsetzen(b.start + st.von, b.start + st.bis, n.neu));
+      const bereiche = p.modell.eigeneBereiche();
+      if (!n.alt) {
+        const b = bereiche[bereiche.length - 1] || p.modell.eigenerBereich();
+        return rspEingesetzt(p, p.modell.einsetzen(b.ende, b.ende, (b.ende > b.start ? '\n\n' : '') + n.neu));
+      }
+      for (const b of bereiche) {
+        const st = rspStelleFinden(b.text, n.alt);
+        if (st) return rspEingesetzt(p, p.modell.einsetzen(b.start + st.von, b.start + st.bis, n.neu));
+      }
+      return { ok: false, fehler: 'Stelle im Text nicht gefunden' };
     }
     case 'schalten':
       p.schalten(n.an);
