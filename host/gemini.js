@@ -2,7 +2,19 @@
 // Prüfung über die Gemini-API (Vergleich der Geschwindigkeit, 16.10.2026). Gleiche Schnittstelle wie Sitzung,
 // aber zustandslos: jede Anfrage trägt Systemanweisung und Nachricht selbst. Schlüssel: GEMINI_API_KEY.
 const https = require('https');
+const { execFileSync } = require('child_process');
 const { log } = require('./log');
+
+/** Schlüssel aus der Umgebung, sonst aus HKCU\Environment (Programm vor dem Setzen gestartet). */
+function schluesselLesen() {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  try {
+    const aus = execFileSync('reg', ['query', 'HKCU\\Environment', '/v', 'GEMINI_API_KEY'], { windowsHide: true }).toString();
+    const m = /GEMINI_API_KEY\s+REG_\w+\s+(\S+)/.exec(aus);
+    if (m) process.env.GEMINI_API_KEY = m[1];
+  } catch (e) { /* nicht gesetzt */ }
+  return process.env.GEMINI_API_KEY;
+}
 
 class GeminiSitzung {
   /** optionen: { modell(): string, systemPrompt(): string } */
@@ -46,7 +58,7 @@ class GeminiSitzung {
   }
 
   anfrage(text, zeitlimit) {
-    const schluessel = process.env.GEMINI_API_KEY;
+    const schluessel = schluesselLesen();
     if (!schluessel) return Promise.reject(new Error('GEMINI_API_KEY fehlt'));
     const modell = this.o.modell();
     const koerper = JSON.stringify({
