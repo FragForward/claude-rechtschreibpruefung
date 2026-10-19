@@ -46,6 +46,14 @@ const pruefSitzung = () => (/^gemini/.test(lernen.einstellungen().modell) ? gemi
 let auswertungLaeuft = false;
 const AUSWERTUNG_MIN_EINTRAEGE = 15;
 
+let laufend = 0; // Anfragen, deren Antwort noch aussteht
+
+/** Jüngster Änderungszeitpunkt des Host-Codes; ändert er sich, startet der Host neu (19.10.2026). */
+function codeStand() {
+  return Math.max(...fs.readdirSync(__dirname).filter(d => d.endsWith('.js')).map(d => fs.statSync(path.join(__dirname, d)).mtimeMs));
+}
+const CODE_STAND = codeStand();
+
 // --- Native Messaging: 4 Byte Länge (LE) + UTF-8-JSON ---
 let puffer = Buffer.alloc(0);
 process.stdin.on('data', stueck => {
@@ -57,9 +65,11 @@ process.stdin.on('data', stueck => {
     puffer = puffer.subarray(4 + laenge);
     let n;
     try { n = JSON.parse(text); } catch (e) { log('Ungültige Nachricht'); continue; }
+    laufend++;
     bearbeiten(n)
       .then(a => senden({ id: n.id, ok: true, ...a }))
-      .catch(e => { log('Fehler bei', n.art, e.message); senden({ id: n.id, ok: false, fehler: e.message }); });
+      .catch(e => { log('Fehler bei', n.art, e.message); senden({ id: n.id, ok: false, fehler: e.message }); })
+      .finally(() => { laufend--; });
   }
 });
 process.stdin.on('end', () => { log('Erweiterung getrennt, Host endet'); sitzung.beenden(); assistentSitzung.beenden(); process.exit(0); });
@@ -228,6 +238,13 @@ async function auswerten(sofort = false) {
 }
 
 setInterval(() => {
+  // Neuer Code: im Leerlauf beenden. Erweiterungen und Altus starten den Host bei der nächsten Anfrage neu.
+  if (!laufend && !auswertungLaeuft && codeStand() !== CODE_STAND) {
+    log('Neuer Host-Code, Host beendet sich für den Neustart');
+    sitzung.beenden();
+    assistentSitzung.beenden();
+    process.exit(0);
+  }
   if (!auswertungLaeuft && lernen.auswertungFaellig()) {
     auswerten().catch(e => log('Auswertung fehlgeschlagen:', e.message));
     lernen.letzteAktivitaet = 0; // erst nach neuer Aktivität wieder auswerten
