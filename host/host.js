@@ -47,7 +47,7 @@ const geminiSitzung = new GeminiSitzung({
  */
 const GEMINI_MAX_WOERTER = 20;
 const geminiAktiv = () => /^gemini/.test(lernen.einstellungen().modell);
-const pruefSitzung = (text = '') => (geminiAktiv() && text.trim().split(/s+/).length < GEMINI_MAX_WOERTER ? geminiSitzung : sitzung);
+const pruefSitzung = (text = '') => (geminiAktiv() && text.trim().split(/\s+/).length < GEMINI_MAX_WOERTER ? geminiSitzung : sitzung);
 let auswertungLaeuft = false;
 const AUSWERTUNG_MIN_EINTRAEGE = 15;
 
