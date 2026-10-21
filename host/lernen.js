@@ -115,7 +115,7 @@ class Lernen {
     }));
     const sv = typeof daten.satz_vorschlag === 'string' ? daten.satz_vorschlag.trim() : '';
     return {
-      fehler: satzendePruefen(zusammenfassen(fehler), satz, ohneSatzende),
+      fehler: doppelteVermeiden(satzendePruefen(zusammenfassen(fehler), satz, ohneSatzende), satz),
       satz_vorschlag: sv && sv !== satz.trim() ? sv : '',
       satz_erklaerung: typeof daten.satz_erklaerung === 'string' ? daten.satz_erklaerung : '',
     };
@@ -206,6 +206,57 @@ function wortFinden(satz, wort, nr) {
     ab = pos + 1;
   }
   return erster >= 0 ? erster : satz.indexOf(wort);
+}
+
+/**
+ * Erweitert der Vorschlag das Wort um ein Nachbarwort, das schon im Satz steht (auch falsch geschrieben)?
+ * "dir" -> "dir gefallen, was" vor "gefallenw as".
+ */
+function nachbarMitgeschrieben(f, satz) {
+  const norm = t => t.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  const v = f.vorschlag.trim().split(/\s+/), w = f.wort.trim().split(/\s+/);
+  if (v.length <= w.length) return false;
+  const pos = wortFinden(satz, f.wort, f.nr);
+  if (pos < 0) return false;
+  const aehnlich = (a, b) => a.length >= 3 && b.length >= 3 && a.slice(0, 4) === b.slice(0, 4);
+  if (norm(v[0]) === norm(w[0])) { // hinten erweitert
+    const nach = norm(satz.slice(pos + f.wort.length).trim().split(/\s+/)[0] || '');
+    return aehnlich(norm(v[w.length]), nach);
+  }
+  if (norm(v[v.length - 1]) === norm(w[w.length - 1])) { // vorne erweitert
+    const vor = norm(satz.slice(0, pos).trim().split(/\s+/).pop() || '');
+    return aehnlich(norm(v[v.length - w.length - 1]), vor);
+  }
+  return false;
+}
+
+/** Zahl direkt wiederholter Wörter ("geschrieben geschrieben"). */
+function doppelte(text) {
+  return (text.match(/(?<![\p{L}])(\p{L}+)[,.;:]?\s+\1(?![\p{L}])/giu) || []).length;
+}
+
+/**
+ * Entfernt Vorschläge, die Nachbarwörter mitschreiben und so beim Übernehmen Wörter verdoppeln
+ * ("was" -> "geschrieben, was" neben "geschiben" -> "geschrieben"; Gemini, 21.10.2026).
+ */
+function doppelteVermeiden(fehler, satz) {
+  const grund = doppelte(satz);
+  const woerter = t => t.trim().split(/\s+/).length;
+  let liste = fehler.filter(x => {
+    if (!nachbarMitgeschrieben(x, satz)) return true;
+    log('Vorschlag verworfen, er schreibt ein Nachbarwort mit:', x.wort, '->', x.vorschlag);
+    return false;
+  });
+  while (liste.length && doppelte(einsetzen(satz, liste)) > grund) {
+    const jetzt = doppelte(einsetzen(satz, liste));
+    const schuldig = liste
+      .filter(x => woerter(x.vorschlag) > woerter(x.wort))
+      .find(x => doppelte(einsetzen(satz, liste.filter(g => g !== x))) < jetzt);
+    if (!schuldig) break;
+    log('Vorschlag verworfen, er verdoppelt Wörter:', schuldig.wort, '->', schuldig.vorschlag);
+    liste = liste.filter(x => x !== schuldig);
+  }
+  return liste;
 }
 
 /** Setzt alle Hauptvorschläge in den Satz ein, von hinten nach vorn; überlappende Stellen werden übersprungen. */
