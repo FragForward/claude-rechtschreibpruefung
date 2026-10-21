@@ -41,8 +41,13 @@ const geminiSitzung = new GeminiSitzung({
   modell: () => lernen.einstellungen().modell,
   systemPrompt: () => prompt.systemPrompt(lernen.profil(), lernen.woerterbuch()),
 });
-/** Sitzung für Prüfungen: Gemini, wenn ein Gemini-Modell eingestellt ist, sonst Claude. */
-const pruefSitzung = () => (/^gemini/.test(lernen.einstellungen().modell) ? geminiSitzung : sitzung);
+/**
+ * Sitzung für Prüfungen: Gemini für kurze Sätze, wenn ein Gemini-Modell eingestellt ist; lange Sätze und
+ * Absätze bleiben bei Claude, Gemini setzt dort Korrekturen oft an die falsche Stelle (21.10.2026).
+ */
+const GEMINI_MAX_WOERTER = 20;
+const geminiAktiv = () => /^gemini/.test(lernen.einstellungen().modell);
+const pruefSitzung = (text = '') => (geminiAktiv() && text.trim().split(/s+/).length < GEMINI_MAX_WOERTER ? geminiSitzung : sitzung);
 let auswertungLaeuft = false;
 const AUSWERTUNG_MIN_EINTRAEGE = 15;
 
@@ -84,25 +89,26 @@ function senden(objekt) {
 async function bearbeiten(n) {
   switch (n.art) {
     case 'status':
-      if (pruefSitzung() === sitzung) sitzung.vorwaermen();
+      sitzung.vorwaermen();
       return { bereit: sitzung.bereit, modell: lernen.einstellungen().modell, anfragen: sitzung.anfragen };
 
     case 'pruefen': {
       lernen.aktivitaet();
       const satz = String(n.satz || ''), gruppe = n.gruppe ? String(n.gruppe) : undefined;
+      const ps = pruefSitzung(satz);
       const pruefText = prompt.pruefNachricht(satz, String(n.kontext || ''), n.offen === true, n.schreibt === true, n.einzeilig === true, Array.isArray(n.korrigiert) ? n.korrigiert.map(String) : []);
       let roh;
       try {
-        roh = await pruefSitzung().fragen(pruefText, 90000, gruppe);
+        roh = await ps.fragen(pruefText, 90000, gruppe);
       } catch (e) {
         if (e.verworfen) return { fehler: [], verworfen: true }; // neuere Fassung desselben Satzes wartet schon
         throw e;
       }
       const erg = lernen.antwortAuswerten(roh, satz, n.einzeilig === true);
       // Gegenprüfung: Satz mit allen Vorschlägen als Ganzes lesen lassen, bevor etwas angezeigt wird.
-      if (gegenpruefungNoetig(erg.fehler) && !pruefSitzung().wartet(gruppe)) {
+      if (gegenpruefungNoetig(erg.fehler) && !ps.wartet(gruppe)) {
         try {
-          const roh2 = await pruefSitzung().fragen(prompt.gegenpruefNachricht(pruefText, erg.fehler, einsetzen(satz, erg.fehler)), 90000, undefined, true);
+          const roh2 = await ps.fragen(prompt.gegenpruefNachricht(pruefText, erg.fehler, einsetzen(satz, erg.fehler)), 90000, undefined, true);
           const vorher = erg.fehler.map(f => f.wort + '>' + f.vorschlag).join('|');
           erg.fehler = lernen.antwortAuswerten(roh2, satz, n.einzeilig === true).fehler;
           const nachher = erg.fehler.map(f => f.wort + '>' + f.vorschlag).join('|');
@@ -120,7 +126,7 @@ async function bearbeiten(n) {
     case 'absatz': {
       lernen.aktivitaet();
       const text = String(n.text || '').slice(0, 3000);
-      const roh = await pruefSitzung().fragen(prompt.absatzNachricht(text), 120000, 'absatz:' + text.slice(0, 40));
+      const roh = await sitzung.fragen(prompt.absatzNachricht(text), 120000, 'absatz:' + text.slice(0, 40));
       const d = letztesJson(roh) || {};
       const vorschlag = typeof d.vorschlag === 'string' ? d.vorschlag.trim() : '';
       if (vorschlag && vorschlag !== text) lernen.journal({ art: 'geprueft', satz: text, fehler: [], satz_vorschlag: vorschlag });
@@ -255,4 +261,4 @@ setInterval(() => {
   if (assistentSitzung.neustartFaellig(40, e.maxStundenProSitzung)) assistentSitzung.neustarten();
 }, 30000);
 
-if (pruefSitzung() === sitzung) sitzung.vorwaermen();
+sitzung.vorwaermen();
