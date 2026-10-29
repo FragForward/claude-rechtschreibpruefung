@@ -13,6 +13,23 @@ const assistent = require('./assistent');
  * Gegenprüfung nur, wo Vorschläge zusammenwirken können: ab zwei Befunden oder bei einem Befund, der mehr als
  * Groß-/Kleinschreibung oder ein Satzzeichen ändert (spart bei langen Mails die halbe Wartezeit; 12.10.2026).
  */
+const ANMELDUNG_ABGELAUFEN = /authenticat|oauth|log ?in|credential/i;
+const ANMELDE_HINWEIS = 'Claude-Anmeldung abgelaufen: in einem Terminal "claude" starten und /login ausführen.';
+
+/**
+ * Fragt die Sitzung; ist die Claude-Anmeldung abgelaufen, übernimmt Gemini, wenn es eingestellt ist (29.10.2026).
+ */
+async function fragenMitAusweich(s, text, zeitlimit, gruppe, vorne) {
+  try {
+    return await s.fragen(text, zeitlimit, gruppe, vorne);
+  } catch (e) {
+    if (s !== sitzung || !ANMELDUNG_ABGELAUFEN.test(e.message)) throw e;
+    if (!geminiAktiv()) throw new Error(ANMELDE_HINWEIS);
+    log('Claude nicht angemeldet, Gemini übernimmt');
+    return geminiSitzung.fragen(text, zeitlimit, gruppe, vorne);
+  }
+}
+
 function gegenpruefungNoetig(fehler) {
   if (fehler.length !== 1) return fehler.length > 1;
   const kern = t => t.toLowerCase().replace(/[.,;:!?]/g, '').trim();
@@ -73,7 +90,10 @@ process.stdin.on('data', stueck => {
     laufend++;
     bearbeiten(n)
       .then(a => senden({ id: n.id, ok: true, ...a }))
-      .catch(e => { log('Fehler bei', n.art, e.message); senden({ id: n.id, ok: false, fehler: e.message }); })
+      .catch(e => {
+        log('Fehler bei', n.art, e.message);
+        senden({ id: n.id, ok: false, fehler: ANMELDUNG_ABGELAUFEN.test(e.message) ? ANMELDE_HINWEIS : e.message });
+      })
       .finally(() => { laufend--; });
   }
 });
@@ -99,7 +119,7 @@ async function bearbeiten(n) {
       const pruefText = prompt.pruefNachricht(satz, String(n.kontext || ''), n.offen === true, n.schreibt === true, n.einzeilig === true, Array.isArray(n.korrigiert) ? n.korrigiert.map(String) : []);
       let roh;
       try {
-        roh = await ps.fragen(pruefText, 90000, gruppe);
+        roh = await fragenMitAusweich(ps, pruefText, 90000, gruppe);
       } catch (e) {
         if (e.verworfen) return { fehler: [], verworfen: true }; // neuere Fassung desselben Satzes wartet schon
         throw e;
@@ -108,7 +128,7 @@ async function bearbeiten(n) {
       // Gegenprüfung: Satz mit allen Vorschlägen als Ganzes lesen lassen, bevor etwas angezeigt wird.
       if (gegenpruefungNoetig(erg.fehler) && !ps.wartet(gruppe)) {
         try {
-          const roh2 = await ps.fragen(prompt.gegenpruefNachricht(pruefText, erg.fehler, einsetzen(satz, erg.fehler)), 90000, undefined, true);
+          const roh2 = await fragenMitAusweich(ps, prompt.gegenpruefNachricht(pruefText, erg.fehler, einsetzen(satz, erg.fehler)), 90000, undefined, true);
           const vorher = erg.fehler.map(f => f.wort + '>' + f.vorschlag).join('|');
           erg.fehler = lernen.antwortAuswerten(roh2, satz, n.einzeilig === true).fehler;
           const nachher = erg.fehler.map(f => f.wort + '>' + f.vorschlag).join('|');
@@ -126,7 +146,7 @@ async function bearbeiten(n) {
     case 'absatz': {
       lernen.aktivitaet();
       const text = String(n.text || '').slice(0, 3000);
-      const roh = await sitzung.fragen(prompt.absatzNachricht(text), 120000, 'absatz:' + text.slice(0, 40));
+      const roh = await fragenMitAusweich(sitzung, prompt.absatzNachricht(text), 120000, 'absatz:' + text.slice(0, 40));
       const d = letztesJson(roh) || {};
       const vorschlag = typeof d.vorschlag === 'string' ? d.vorschlag.trim() : '';
       if (vorschlag && vorschlag !== text) lernen.journal({ art: 'geprueft', satz: text, fehler: [], satz_vorschlag: vorschlag });
