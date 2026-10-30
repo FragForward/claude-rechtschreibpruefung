@@ -81,7 +81,9 @@ Object.assign(RspPruefer.prototype, {
     if (!a) return;
     const neu = d.eintrag.vorschlag;
     this.absaetze.set(neu, { zustand: 'fertig', vorschlag: '' }); // Claudes eigene Fassung nicht erneut durchsehen
-    if (!(await this.modell.ersetzen(a.start, a.ende, neu))) return;
+    const ok = neu.includes('\n') ? await this.modell.einsetzen(a.start, a.ende, neu) : await this.modell.ersetzen(a.start, a.ende, neu);
+    if (!ok) return;
+    this.alsGeprueftMarkieren(a.start, a.start + neu.length);
     rspSenden({ art: 'aktion', aktion: 'uebernommen', von: d.absatz, nach: neu, typ: 'satz' });
     this.zeichnen();
   },
