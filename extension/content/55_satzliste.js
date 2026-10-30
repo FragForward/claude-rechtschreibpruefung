@@ -34,6 +34,20 @@ Object.assign(RspPruefer.prototype, {
   },
 
   /**
+   * Sätze im eben übernommenen Bereich gelten als geprüft: Was der Schreiber aus Vorschlägen übernimmt,
+   * wird nicht erneut angemahnt, auch wenn sich die Satzgrenzen verschoben haben (30.10.2026).
+   */
+  alsGeprueftMarkieren(von, bis, nochmal = true) {
+    this.modell.aufbauen();
+    for (const s of rspSaetze(this.modell.text)) {
+      if (s.ende < von || s.start > bis || this.cache.has(s.text)) continue;
+      this.cache.set(s.text, { zustand: 'fertig', fehler: [], satzVorschlag: '', satzErklaerung: '' });
+    }
+    // Lexical-Editoren (WhatsApp, Slack) bauen den Text erst kurz danach neu auf.
+    if (nochmal) setTimeout(() => this.alsGeprueftMarkieren(von, bis, false), 250);
+  },
+
+  /**
    * Restbefunde auf den geänderten Satz übertragen. Ist nichts mehr offen und wurden Alternativen statt der
    * gegengeprüften Hauptvorschläge gewählt (aenderungen), wird der Satz als Ganzes nachkontrolliert.
    */
@@ -107,6 +121,7 @@ Object.assign(RspPruefer.prototype, {
     const bis = Math.max(...plan.map(x => x.pos + x.f.wort.length));
     const ersatz = neuerSatz.slice(von, bis + neuerSatz.length - s.text.length);
     const erledigt = (await this.modell.ersetzen(s.start + von, s.start + bis, ersatz)) ? plan : [];
+    if (erledigt.length) this.alsGeprueftMarkieren(s.start, s.start + neuerSatz.length);
     for (const { f, neu } of erledigt) {
       rspSenden({ art: 'aktion', aktion: 'uebernommen', von: f.wort, nach: neu, typ: f.typ, eindeutig: f.eindeutig }).then(a => {
         if (a.autokorrektur) this.auto.setzen(a.autokorrektur);

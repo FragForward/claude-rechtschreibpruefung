@@ -263,6 +263,7 @@ class RspPruefer {
       this.uebertragen(d.satz, neuerSatz, rest, neu === f.vorschlag ? [] : [f.wort + ' -> ' + neu]);
     }
     if (!(await this.modell.ersetzen(von, bis, neu))) return;
+    if (!alt || !alt.fehler.some(x => x !== f)) this.alsGeprueftMarkieren(s.start, s.start + neuerSatz.length);
     if (cursor >= 0 && (cursor < von || cursor > bis)) {
       this.modell.aufbauen();
       this.modell.cursorSetzen(cursor > bis ? cursor + neu.length - (bis - von) : cursor);
@@ -279,7 +280,10 @@ class RspPruefer {
     if (!s) return;
     const neu = d.eintrag.satzVorschlag;
     this.cache.set(neu, { zustand: 'fertig', fehler: [], satzVorschlag: '', satzErklaerung: '' });
-    if (!(await this.modell.ersetzen(s.start, s.ende, neu))) return;
+    // Mit Zeilenumbruch über einsetzen, sonst gehen die Umbrüche in Slack und WhatsApp verloren.
+    const ok = neu.includes('\n') ? await this.modell.einsetzen(s.start, s.ende, neu) : await this.modell.ersetzen(s.start, s.ende, neu);
+    if (!ok) return;
+    this.alsGeprueftMarkieren(s.start, s.start + neu.length);
     rspSenden({ art: 'aktion', aktion: 'uebernommen', von: d.satz, nach: neu, typ: 'satz' });
     this.zeichnen();
   }
