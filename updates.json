@@ -3,8 +3,8 @@
                    "rechtschreibpruefung@lokal":  {
                                                       "updates":  [
                                                                       {
-                                                                          "version":  "0.6.7",
-                                                                          "update_link":  "https://github.com/FragForward/claude-rechtschreibpruefung/releases/download/v0.6.7/rechtschreibpruefung-firefox-0.6.7.xpi"
+                                                                          "version":  "0.6.8",
+                                                                          "update_link":  "https://github.com/FragForward/claude-rechtschreibpruefung/releases/download/v0.6.8/rechtschreibpruefung-firefox-0.6.8.xpi"
                                                                       }
                                                                   ]
                                                   }
