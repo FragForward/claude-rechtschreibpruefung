@@ -13,6 +13,7 @@ const assistent = require('./assistent');
  * Gegenprüfung nur, wo Vorschläge zusammenwirken können: ab zwei Befunden oder bei einem Befund, der mehr als
  * Groß-/Kleinschreibung oder ein Satzzeichen ändert (spart bei langen Mails die halbe Wartezeit; 12.10.2026).
  */
+let anmeldungNeustart = 0;
 const ANMELDUNG_ABGELAUFEN = /authenticat|oauth|log ?in|credential/i;
 const ANMELDE_HINWEIS = 'Claude-Anmeldung abgelaufen: in einem Terminal "claude" starten und /login ausführen.';
 
@@ -24,6 +25,8 @@ async function fragenMitAusweich(s, text, zeitlimit, gruppe, vorne) {
     return await s.fragen(text, zeitlimit, gruppe, vorne);
   } catch (e) {
     if (s !== sitzung || !ANMELDUNG_ABGELAUFEN.test(e.message)) throw e;
+    // Neu laden, damit eine inzwischen erneuerte Anmeldung (claude /login) beim nächsten Mal greift.
+    if (Date.now() - anmeldungNeustart > 60000) { anmeldungNeustart = Date.now(); sitzung.neustarten(); }
     if (!geminiAktiv()) throw new Error(ANMELDE_HINWEIS);
     log('Claude nicht angemeldet, Gemini übernimmt');
     return geminiSitzung.fragen(text, zeitlimit, gruppe, vorne);
@@ -137,6 +140,7 @@ async function bearbeiten(n) {
           log('Gegenprüfung fehlgeschlagen, erste Antwort bleibt:', e.message);
         }
       }
+      if (!n.einzeilig) erg.fehler = lernen.satzanfangPruefen(satz, String(n.kontext || ''), erg.fehler);
       // Satzfassung, die nur die Einzelkorrekturen wiederholt, bietet nichts Neues.
       if (erg.satz_vorschlag && erg.satz_vorschlag.trim() === einsetzen(satz, erg.fehler).trim()) erg.satz_vorschlag = '';
       lernen.journal({ art: 'geprueft', satz: n.satz, nachkontrolle: Array.isArray(n.korrigiert) || undefined, fehler: erg.fehler.map(f => ({ wort: f.wort, vorschlag: f.vorschlag, typ: f.typ })), satz_vorschlag: erg.satz_vorschlag });

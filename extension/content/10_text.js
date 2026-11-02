@@ -40,7 +40,7 @@ class RspTextModell {
           if (!k.data) continue;
           if (!/[ \t\r\n]{2}|[\t\r\n]/.test(k.data) || !zusammenfassen(k.parentElement)) {
             teile.push({ knoten: k, start: text.length, laenge: k.data.length });
-            text += k.data.replace(/[\r\n\t\u00a0]/g, ' ');
+            text += k.data.replace(/[\r\n\t\u00a0\u200b-\u200d\ufeff]/g, ' ');
             continue;
           }
           let neu = '';
@@ -50,7 +50,7 @@ class RspTextModell {
             const leer = /[ \t\r\n]/.test(k.data[i]);
             if (leer && (neu ? neu.endsWith(' ') : davorLeer)) continue;
             karte.push(i);
-            neu += leer || k.data[i] === '\u00a0' ? ' ' : k.data[i];
+            neu += leer || /[\u00a0\u200b-\u200d\ufeff]/.test(k.data[i]) ? ' ' : k.data[i];
           }
           karte.push(k.data.length);
           teile.push({ knoten: k, start: text.length, laenge: neu.length, karte });

@@ -90,6 +90,28 @@ class Lernen {
     return this.journalLesen().length > 0;
   }
 
+  /**
+   * Kleiner Satzanfang wird immer gemeldet, unabhängig vom Modell (Gemini übersah "flo" am Anfang; 02.11.2026).
+   * Ausnahmen: nach Anrede mit Komma, klein eingetragene Wörterbuchwörter, Adressen und Schreibungen wie "iPhone".
+   */
+  satzanfangPruefen(satz, kontext, fehler) {
+    const m = /^(\p{Ll}[\p{L}\p{N}'-]*)/u.exec(satz);
+    if (!m) return fehler;
+    const wort = m[1];
+    if (/\p{Lu}/u.test(wort.slice(1)) || /[@/.:]/.test(satz.slice(wort.length, wort.length + 1))) return fehler;
+    if (this.woerterbuch().includes(wort)) return fehler;
+    const pos = kontext ? kontext.indexOf(satz) : -1;
+    const davor = pos > 0 ? kontext.slice(0, pos).replace(/\s+$/, '') : '';
+    if (davor && !/[.!?:]$/.test(davor)) return fehler; // Anrede mit Komma oder Satz läuft weiter
+    const gross = wort[0].toUpperCase() + wort.slice(1);
+    const vorhanden = fehler.find(f => f.nr === 1 && satz.startsWith(f.wort));
+    if (vorhanden) {
+      if (/^\p{Ll}/u.test(vorhanden.vorschlag)) vorhanden.vorschlag = vorhanden.vorschlag[0].toUpperCase() + vorhanden.vorschlag.slice(1);
+      return fehler;
+    }
+    return [{ wort, nr: 1, typ: 'rechtschreibung', vorschlag: gross, alternativen: [], erklaerung: 'Satzanfang großschreiben', eindeutig: false }, ...fehler];
+  }
+
   /** Wandelt Claudes Antwort in eine bereinigte Fehlerliste. */
   antwortAuswerten(roh, satz, ohneSatzende) {
     const daten = letztesJson(roh) || { fehler: [] };
