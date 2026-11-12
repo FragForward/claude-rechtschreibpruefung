@@ -122,7 +122,7 @@ class WordCraftService {
         targets.push(words > 1 ? { p: { index: p.index, text: r.clean }, from, to } : { p: { index: p.index, text: r.clean }, from: 0, to: r.clean.length });
       }
     }
-    await this.bridge.run('review.deleteComment', { id }).catch(() => {});
+    await this.deleteKeepingCaret(id);
     for (const t of targets) {
       const current = await readParagraph(this.bridge, t.p.index);
       const text = current.clean;
@@ -144,6 +144,24 @@ class WordCraftService {
       : changes ? `Claude: Text verbessert (${changes} Änderungen)`
       : proposed ? 'Claude: Vorschläge konnten nicht eingetragen werden (Dokument geschützt oder inzwischen geändert)'
       : 'Claude: Keine Verbesserung nötig');
+  }
+
+  /** Deletes the trigger comment; its anchor characters vanish, so a caret in that paragraph is set again. */
+  async deleteKeepingCaret(id) {
+    const sel = await this.bridge.run('document.selection', {});
+    const a = sel.anchor;
+    const here = a && a.story === 'body' && a.path.length === 1;
+    const before = here ? await readParagraph(this.bridge, a.path[0]) : null;
+    await this.bridge.run('review.deleteComment', { id }).catch(() => {});
+    if (!before) return;
+    const after = await readParagraph(this.bridge, a.path[0]);
+    if (after.clean !== before.clean) return;
+    const at = { story: 'body', path: [a.path[0]] };
+    await this.bridge.run('caret.set', { pos: { ...at, off: after.toRaw(before.fromRaw(a.off)) } });
+    const f = sel.focus;
+    if (f && f.story === 'body' && f.path.length === 1 && f.path[0] === a.path[0] && f.off !== a.off) {
+      await this.bridge.run('caret.set', { pos: { ...at, off: after.toRaw(before.fromRaw(f.off)) }, extend: true });
+    }
   }
 
   /** Login problems are shown at most once an hour (R5); other failures only go to the log. */

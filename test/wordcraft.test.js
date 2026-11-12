@@ -268,3 +268,62 @@ test('Prüfbericht P3: bewegt sich der Cursor während des Eintragens, wird abge
     assert.strictEqual((await bridge.run('document.text', {})).text, 'eins zwei drei VIER.\nAnderer Absatz.');
   } finally { bridge.close(); }
 });
+
+test('R4 (Nachprüfung): Cursorsprung nach einem Kommentar bricht ebenfalls ab, Cursor bleibt beim Schreiber', async () => {
+  const { applyEdits } = require('../host/wordcraft/apply');
+  const bridge = new WordCraftBridge({ readRoot: ROOT, writeRoot: ROOT });
+  await bridge.start();
+  try {
+    await newDocument(bridge, 'eins zwei drei vier.\nAnderer Absatz.', 1);
+    const original = bridge.run.bind(bridge);
+    bridge.run = async function (command, params) {
+      const r = await original(command, params);
+      if (command === 'review.newComment') await original('caret.set', { pos: { story: 'body', path: [1], off: 5 } });
+      return r;
+    };
+    const written = await applyEdits(bridge, 0, [
+      { start: 0, end: 4, text: 'Eins' }, { start: 10, end: 10, comment: 'Claude, Vorschlag: x' }, { start: 15, end: 19, text: 'VIER', comment: 'Claude: y' },
+    ], 'eins zwei drei vier.');
+    assert.strictEqual(written, 1);
+    assert.ok((await original('document.text', {})).text.startsWith('eins zwei drei VIER.'));
+    const sel = await original('document.selection', {});
+    assert.deepStrictEqual([sel.anchor.path[0], sel.anchor.off], [1, 5], 'Cursor bleibt, wo der Schreiber ist');
+  } finally { bridge.close(); }
+});
+
+test('K6 (Nachprüfung): Kommentar „claude“ im Absatz mit dem Cursor, Cursor bleibt vor demselben Wort', async () => {
+  const env = await setup('Anfang.\nder alte text hat mehr Wörter.', 0, [{
+    when: n => n.art === 'assistent' && n.aufgabe === 'verbessern',
+    reply: { ok: true, text: 'Der text hat mehr Wörter.', hinweis: '' },
+  }]);
+  try {
+    await env.service.tick();
+    await env.bridge.run('caret.set', { pos: { story: 'body', path: [1], off: 0 } });
+    await env.bridge.run('review.newComment', { text: 'claude' });
+    const p = await readParagraph(env.bridge, 1);
+    await env.bridge.run('caret.set', { pos: { story: 'body', path: [1], off: p.toRaw(p.clean.indexOf('text')) } });
+    await env.service.tick();
+    env.now.advance(3000);
+    await env.service.tick();
+    assert.strictEqual(await cleanText(env.bridge), 'Anfang.\nDer text hat mehr Wörter.');
+    const nach = await readParagraph(env.bridge, 1);
+    const sel = await env.bridge.run('document.selection', {});
+    assert.strictEqual(nach.fromRaw(sel.anchor.off), nach.clean.indexOf('text'));
+  } finally { env.bridge.close(); }
+});
+
+test('Nachprüfung: markierter Bereich im Absatz bleibt markiert', async () => {
+  const { applyEdits } = require('../host/wordcraft/apply');
+  const bridge = new WordCraftBridge({ readRoot: ROOT, writeRoot: ROOT });
+  await bridge.start();
+  try {
+    await newDocument(bridge, 'eins zwei drei vier.', 0);
+    const p = await readParagraph(bridge, 0);
+    await bridge.run('caret.set', { pos: { story: 'body', path: [0], off: p.toRaw(10) } });
+    await bridge.run('caret.set', { pos: { story: 'body', path: [0], off: p.toRaw(14) }, extend: true });
+    await applyEdits(bridge, 0, [{ start: 0, end: 4, text: 'Einsundzwanzig' }], 'eins zwei drei vier.');
+    const nach = await readParagraph(bridge, 0);
+    const sel = await bridge.run('document.selection', {});
+    assert.strictEqual(nach.clean.slice(nach.fromRaw(sel.anchor.off), nach.fromRaw(sel.focus.off)), 'drei');
+  } finally { bridge.close(); }
+});
