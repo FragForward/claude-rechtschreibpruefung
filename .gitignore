@@ -7,3 +7,4 @@ node_modules/
 host/host.cmd
 host/rechtschreibpruefung.json
 host/rechtschreibpruefung.chrome.json
+host/wordcraft/start.vbs

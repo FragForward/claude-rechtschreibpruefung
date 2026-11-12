@@ -53,10 +53,28 @@ foreach ($basis in $eintraege.Keys) {
 
 & (Join-Path $root 'bauen.ps1')
 
+# WordCraft (docs/spec/wordcraft.md K9): Steuerschnittstelle dauerhaft an, Hintergrunddienst startet mit Windows.
+if (-not [Environment]::GetEnvironmentVariable('WORDCRAFT_CONTROL_PORT', 'User')) {
+  [Environment]::SetEnvironmentVariable('WORDCRAFT_CONTROL_PORT', '47613', 'User')
+}
+$dienst = Join-Path $root 'host\wordcraft\service.js'
+$vbs = Join-Path $root 'host\wordcraft\start.vbs'
+# VBScript startet node ohne Konsolenfenster; Anfuehrungszeichen in VBS werden verdoppelt.
+$vbsInhalt = 'CreateObject("WScript.Shell").Run """' + $node + '"" ""' + $dienst + '""", 0, False'
+[IO.File]::WriteAllText($vbs, $vbsInhalt + "`r`n", (New-Object System.Text.UTF8Encoding($false)))
+$wscript = Join-Path $env:WINDIR 'System32\wscript.exe'
+$autostart = Join-Path ([Environment]::GetFolderPath('Startup')) 'Rechtschreibpruefung WordCraft.lnk'
+$verknuepfung = (New-Object -ComObject WScript.Shell).CreateShortcut($autostart)
+$verknuepfung.TargetPath = $wscript
+$verknuepfung.Arguments = '"' + $vbs + '"'
+$verknuepfung.Save()
+Start-Process $wscript -ArgumentList ('"' + $vbs + '"')
+
 Write-Host ''
 Write-Host "Hilfsprogramm angemeldet (Thunderbird und Chrome), Daten in $daten"
 Write-Host ''
 Write-Host 'Thunderbird: Add-ons und Themes > Zahnrad > Add-on aus Datei installieren >'
 Write-Host "  $((Get-ChildItem (Join-Path $root 'dist\rechtschreibpruefung-*.xpi') | Sort-Object LastWriteTime | Select-Object -Last 1).FullName)"
+Write-Host 'WordCraft: Hintergrunddienst laeuft und startet mit Windows; WordCraft einmal neu starten.'
 Write-Host 'Chrome: chrome://extensions > Entwicklermodus > Entpackte Erweiterung laden >'
 Write-Host "  $(Join-Path $root 'dist\chrome')"
