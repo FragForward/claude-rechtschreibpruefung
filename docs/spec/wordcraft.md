@@ -54,3 +54,5 @@ Hintergrund automatisch jeden fertigen Absatz und trägt Korrekturen als nachver
 | 12.11.2026 | Claude-Prüfung in WordCraft mit nachverfolgten Änderungen, dazu „Text verbessern“ | User im Chat (Antwort „1 und 3“) |
 | 12.11.2026 | Deutsches Sprachpaket für die eingebaute Prüfung einrichten | User im Chat |
 | 12.11.2026 | Keine Tastenkombinationen, sondern Knopf oder vollautomatisch; ein Knopf geht technisch nicht, daher automatisch; „Text verbessern“ über einen Kommentar „claude“ | User im Chat |
+| 12.11.2026 | Restrisiko angenommen: Klickt und tippt der Schreiber in der Sekunde des Eintragens in denselben Absatz, wird das nicht erkannt und seine Eingabe erscheint als Aenderung von Claude (WordCraft hat nur einen Cursor) | User im Chat |
+| 12.11.2026 | Text, der beim Oeffnen schon im Dokument steht, wird nicht von selbst geprueft, nur danach geschriebene oder geaenderte Absaetze; fuer bestehende Dokumente Kommentar "claude alles" | Festlegung beim Bau, dem User mitgeteilt |

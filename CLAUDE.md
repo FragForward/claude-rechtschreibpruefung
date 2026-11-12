@@ -43,7 +43,7 @@ Ablauf je Änderung: globaler Skill `feature-ablauf`.
 | Bereich | Status | Spezifikation |
 |---|---|---|
 | Prüfung in Thunderbird, Chrome, Firefox, Altus | fertig | – (README) |
-| WordCraft-Anbindung | im Bau | [docs/spec/wordcraft.md](docs/spec/wordcraft.md) |
+| WordCraft-Anbindung | fertig | [docs/spec/wordcraft.md](docs/spec/wordcraft.md) |
 
 ## Konventionen
 
