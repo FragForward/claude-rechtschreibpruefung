@@ -53,6 +53,8 @@ Gelerntes liegt in `daten/` im Haupt-Checkout (nicht im Repo):
 - **Lernen**: Nach 10 Minuten ohne Schreiben wertet die Sitzung das Journal aus und aktualisiert `schreibprofil.md` (bei zwei Browsern nur einer, Sperrdatei).
 - **Selbstaktualisierung**: Nach `bauen.ps1` lädt sich die Erweiterung innerhalb von 30 s neu (Thunderbird: nur ohne offene Mail, Chrome und entpacktes Firefox: nach 2 Minuten ohne Schreiben). Signiertes Firefox ab 0.6.0 holt neue Versionen über GitHub (`signieren.ps1` veröffentlicht sie).
 
+- **WordCraft**: Fertige Absätze werden im Hintergrund geprüft, Korrekturen stehen als nachverfolgte Änderungen von "Claude" im Dokument; Kommentar "claude" auf Text bzw. "claude alles" lässt Claude überarbeiten ([docs/spec/wordcraft.md](docs/spec/wordcraft.md)).
+
 ## Installation
 
 Kurz: Node.js und Claude Code mit Abo-Login, dann `installieren.ps1`, dann die Erweiterung im jeweiligen Programm laden. Ausführlich, Schritt für Schritt mit Prüfungen (auch für KI-Agenten geeignet): [INSTALLATION.md](INSTALLATION.md).
