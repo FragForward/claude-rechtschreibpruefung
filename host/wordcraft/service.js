@@ -2,7 +2,7 @@
 // Background service for WordCraft (docs/spec/wordcraft.md): checks every finished paragraph once the writer
 // pauses, and improves text marked with a comment "claude" / "claude alles". Run: node host/wordcraft/service.js
 const { readParagraph, readParagraphs } = require('./document');
-const { applyEdits } = require('./apply');
+const { applyEditsDetailed } = require('./apply');
 const { splitSentences, findWord, wordDiff } = require('./text');
 
 const TRIGGER = /^\s*claude(\s+alles)?\s*[.!]?\s*$/i;
@@ -64,7 +64,7 @@ class WordCraftService {
     const caretParagraph = caret.anchor && caret.anchor.story === 'body' ? caret.anchor.path[0] : -1;
     for (const p of paragraphs) {
       if (p.index === caretParagraph || !/\p{L}/u.test(p.text)) continue;
-      if (this.pending.has(p.text)) { await this.write(p, this.pending.get(p.text)); continue; }
+      if (this.pending.has(p.text)) { if (!(await this.write(p, this.pending.get(p.text)))) return; continue; }
       if (this.known.has(p.text)) continue;
       const edits = await this.check(p);
       if (!edits) return; // writer typed meanwhile: write on the next pause
@@ -92,15 +92,17 @@ class WordCraftService {
     if (!same || same.text !== p.text) return clean; // changed while checking: the new text gets its own check
     const signature = now.paragraphs.map(x => x.text).join('\n');
     if (signature !== this.signature.split('\u0000')[0]) { this.pending.set(p.text, clean); return null; }
-    await this.write(p, clean);
-    return clean;
+    return (await this.write(p, clean)) ? clean : null;
   }
 
+  /** Writes the edits; false when the writer interrupted (then the rest is checked again at the next pause). */
   async write(p, edits) {
     this.pending.delete(p.text);
-    const written = await applyEdits(this.bridge, p.index, edits, p.text).catch(e => { this.log('WordCraft: Eintragen fehlgeschlagen', e.message); return 0; });
+    const r = await applyEditsDetailed(this.bridge, p.index, edits, p.text).catch(e => { this.log('WordCraft: Eintragen fehlgeschlagen', e.message); return { written: 0, aborted: false }; });
+    this.log('WordCraft: Absatz', p.index, 'geprüft,', r.written, 'Korrekturen', r.aborted ? '(unterbrochen)' : '');
+    if (r.aborted) { this.lastChange = this.now(); return false; }
     this.known.add((await readParagraph(this.bridge, p.index)).clean);
-    this.log('WordCraft: Absatz', p.index, 'geprüft,', written, 'Korrekturen');
+    return true;
   }
 
   /** Comment "claude" on a selection, on a paragraph, or "claude alles" for the whole document (K5, K6). */
@@ -137,10 +139,13 @@ class WordCraftService {
       const answer = lead + a.text.replace(/\s*\n+\s*/g, ' ').trim() + trail;
       const edits = wordDiff(part, answer).map(e => ({ ...e, start: e.start + t.from, end: e.end + t.from }));
       proposed += edits.length;
-      changes += await applyEdits(this.bridge, t.p.index, edits, text).catch(() => 0);
+      const r = await applyEditsDetailed(this.bridge, t.p.index, edits, text).catch(() => ({ written: 0, aborted: false }));
+      changes += r.written;
+      if (r.aborted) { failed = 'unterbrochen, weil weitergeschrieben wurde'; break; }
       this.known.add((await readParagraph(this.bridge, t.p.index)).clean);
     }
     this.notify(failed && !changes ? 'Claude: Verbessern fehlgeschlagen (' + failed + ')'
+      : failed ? `Claude: Verbessern ${failed} (${changes} Änderungen eingetragen)`
       : changes ? `Claude: Text verbessert (${changes} Änderungen)`
       : proposed ? 'Claude: Vorschläge konnten nicht eingetragen werden (Dokument geschützt oder inzwischen geändert)'
       : 'Claude: Keine Verbesserung nötig');

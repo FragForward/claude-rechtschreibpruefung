@@ -327,3 +327,22 @@ test('Nachprüfung: markierter Bereich im Absatz bleibt markiert', async () => {
     assert.strictEqual(nach.clean.slice(nach.fromRaw(sel.anchor.off), nach.fromRaw(sel.focus.off)), 'drei');
   } finally { bridge.close(); }
 });
+
+test('R4 (dritte Prüfung): Cursorsprung vor der ersten Korrektur bricht ab', async () => {
+  const { applyEditsDetailed } = require('../host/wordcraft/apply');
+  const bridge = new WordCraftBridge({ readRoot: ROOT, writeRoot: ROOT });
+  await bridge.start();
+  try {
+    await newDocument(bridge, 'eins zwei drei vier.\nAnderer Absatz.', 1);
+    const original = bridge.run.bind(bridge);
+    bridge.run = async function (command, params) {
+      const r = await original(command, params);
+      if (command === 'file.setAuthor' && params.name === 'Claude') await original('caret.set', { pos: { story: 'body', path: [1], off: 4 } });
+      return r;
+    };
+    const r = await applyEditsDetailed(bridge, 0, [{ start: 0, end: 4, text: 'Eins' }], 'eins zwei drei vier.');
+    assert.deepStrictEqual(r, { written: 0, aborted: true });
+    const sel = await original('document.selection', {});
+    assert.deepStrictEqual([sel.anchor.path[0], sel.anchor.off], [1, 4]);
+  } finally { bridge.close(); }
+});

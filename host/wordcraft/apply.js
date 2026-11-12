@@ -21,11 +21,11 @@ function shifted(pos, done) {
 
 /**
  * edits: [{start, end, text?, comment?}] in positions of `expected` (the readable paragraph text they were made for).
- * Returns the number of written text edits; nothing is written if the paragraph no longer reads `expected`.
+ * Returns {written, aborted}; nothing is written if the paragraph no longer reads `expected`.
  */
-async function applyEdits(bridge, index, edits, expected) {
+async function applyEditsDetailed(bridge, index, edits, expected) {
   const first = await readParagraph(bridge, index);
-  if (first.clean !== expected || !edits.length) return 0;
+  if (first.clean !== expected || !edits.length) return { written: 0, aborted: false };
 
   const inspect = await bridge.run('document.inspect', {});
   const selection = await bridge.run('document.selection', {});
@@ -38,7 +38,7 @@ async function applyEdits(bridge, index, edits, expected) {
   const order = edits.slice().sort((a, b) => b.start - a.start || (a.text === undefined ? -1 : 1));
   const done = [];
   let aborted = false;
-  let last = null;
+  let last = selection;
   try {
     await bridge.run('file.setAuthor', { name: AUTHOR });
     if (!tracking) await bridge.run('review.trackChanges', { value: true });
@@ -70,7 +70,12 @@ async function applyEdits(bridge, index, edits, expected) {
     if (!tracking) await bridge.run('review.trackChanges', { value: false }).catch(() => {});
     if (!aborted) await restoreSelection(bridge, index, selection, mapped, anchorClean, focusClean, done).catch(() => {});
   }
-  return done.length;
+  return { written: done.length, aborted };
+}
+
+/** Number of written edits (see applyEditsDetailed). */
+async function applyEdits(bridge, index, edits, expected) {
+  return (await applyEditsDetailed(bridge, index, edits, expected)).written;
 }
 
 /** Puts the writer's caret or selection back; inside the edited paragraph it stays on the same words. */
@@ -86,4 +91,4 @@ async function restoreSelection(bridge, index, selection, mapped, anchorClean, f
   if (focusClean !== anchorClean) await bridge.run('caret.set', { pos: { ...at, off: p.toRaw(shifted(focusClean, done)) }, extend: true });
 }
 
-module.exports = { applyEdits, AUTHOR };
+module.exports = { applyEdits, applyEditsDetailed, AUTHOR };
