@@ -107,7 +107,7 @@ class WordCraftService {
   async improve(trigger, paragraphs) {
     const id = trigger.id - 1; // comment anchors carry the story number minus one
     const all = /alles/i.test(trigger.text);
-    let changes = 0, failed = '';
+    let changes = 0, proposed = 0, failed = '';
     const targets = [];
     if (all) {
       for (const p of paragraphs) if (/\p{L}/u.test(p.text)) targets.push({ p, from: 0, to: p.text.length });
@@ -132,11 +132,18 @@ class WordCraftService {
         ? { art: 'assistent', aufgabe: 'verbessern', entwurf: text }
         : { art: 'assistent', aufgabe: 'markierung', entwurf: text, markierung: part });
       if (!a || !a.ok || typeof a.text !== 'string') { failed = (a && a.fehler) || 'keine Antwort'; continue; }
-      const edits = wordDiff(part, a.text.replace(/\s*\n+\s*/g, ' ').trim()).map(e => ({ ...e, start: e.start + t.from, end: e.end + t.from }));
+      // Spaces around the selection stay (a double click selects the space after the word too).
+      const lead = part.match(/^\s*/)[0], trail = part.slice(lead.length).match(/\s*$/)[0];
+      const answer = lead + a.text.replace(/\s*\n+\s*/g, ' ').trim() + trail;
+      const edits = wordDiff(part, answer).map(e => ({ ...e, start: e.start + t.from, end: e.end + t.from }));
+      proposed += edits.length;
       changes += await applyEdits(this.bridge, t.p.index, edits, text).catch(() => 0);
       this.known.add((await readParagraph(this.bridge, t.p.index)).clean);
     }
-    this.notify(failed && !changes ? 'Claude: Verbessern fehlgeschlagen (' + failed + ')' : changes ? `Claude: Text verbessert (${changes} Änderungen)` : 'Claude: Keine Verbesserung nötig');
+    this.notify(failed && !changes ? 'Claude: Verbessern fehlgeschlagen (' + failed + ')'
+      : changes ? `Claude: Text verbessert (${changes} Änderungen)`
+      : proposed ? 'Claude: Vorschläge konnten nicht eingetragen werden (Dokument geschützt oder inzwischen geändert)'
+      : 'Claude: Keine Verbesserung nötig');
   }
 
   /** Login problems are shown at most once an hour (R5); other failures only go to the log. */

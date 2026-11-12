@@ -207,3 +207,64 @@ test('Positionen: Umlaute und Emoji werden richtig auf WordCraft-Bytes abgebilde
     assert.strictEqual(await cleanText(bridge), 'Grüße 😀 für Jürgen X.');
   } finally { bridge.close(); }
 });
+
+test('K5 (Prüfbericht P1): Leerzeichen am Ende der Markierung bleibt erhalten', async () => {
+  const env = await setup('zweiter absatz hier.\nEnde.', 1, [{
+    when: n => n.art === 'assistent' && n.aufgabe === 'markierung',
+    reply: n => ({ ok: true, text: n.markierung.toUpperCase(), hinweis: '' }),
+  }]);
+  try {
+    await env.service.tick();
+    await env.bridge.run('caret.set', { pos: { story: 'body', path: [0], off: 0 } });
+    await env.bridge.run('caret.set', { pos: { story: 'body', path: [0], off: 15 }, extend: true });
+    await env.bridge.run('review.newComment', { text: 'claude' });
+    await env.bridge.run('caret.set', { pos: { story: 'body', path: [1], off: 0 } });
+    await env.service.tick();
+    env.now.advance(3000);
+    await env.service.tick();
+    assert.strictEqual(await cleanText(env.bridge), 'ZWEITER ABSATZ hier.\nEnde.');
+  } finally { env.bridge.close(); }
+});
+
+test('K6 (Prüfbericht P4): Cursor im überarbeiteten Absatz bleibt vor demselben Wort', async () => {
+  const env = await setup('Anfang.\nder Text hat mehr Wörter.', 0, [{
+    when: n => n.art === 'assistent' && n.aufgabe === 'verbessern',
+    reply: n => ({ ok: true, text: n.entwurf.startsWith('der') ? 'Übrigens, der Text hat mehr Wörter.' : n.entwurf, hinweis: '' }),
+  }]);
+  try {
+    await env.service.tick();
+    await env.bridge.run('caret.set', { pos: { story: 'body', path: [0], off: 0 } });
+    await env.bridge.run('review.newComment', { text: 'claude alles' });
+    const p = await readParagraph(env.bridge, 1);
+    await env.bridge.run('caret.set', { pos: { story: 'body', path: [1], off: p.toRaw(p.clean.indexOf('mehr')) } });
+    await env.service.tick();
+    env.now.advance(3000);
+    await env.service.tick();
+    const nach = await readParagraph(env.bridge, 1);
+    const sel = await env.bridge.run('document.selection', {});
+    assert.deepStrictEqual(sel.anchor.path, [1]);
+    assert.strictEqual(sel.anchor.off, nach.toRaw(nach.clean.indexOf('mehr')));
+  } finally { env.bridge.close(); }
+});
+
+test('Prüfbericht P3: bewegt sich der Cursor während des Eintragens, wird abgebrochen', async () => {
+  const { applyEdits } = require('../host/wordcraft/apply');
+  const bridge = new WordCraftBridge({ readRoot: ROOT, writeRoot: ROOT });
+  await bridge.start();
+  try {
+    await newDocument(bridge, 'eins zwei drei vier.\nAnderer Absatz.', 1);
+    const original = bridge.run.bind(bridge);
+    let typed = 0;
+    // Nach der ersten Korrektur tippt der Schreiber: der Cursor springt in den anderen Absatz.
+    bridge.tool = async function (name, args) {
+      const r = await WordCraftBridge.prototype.tool.call(this, name, args);
+      if (name === 'type_text' && ++typed === 1) await original('caret.set', { pos: { story: 'body', path: [1], off: 3 } });
+      return r;
+    };
+    const written = await applyEdits(bridge, 0, [
+      { start: 0, end: 4, text: 'Eins' }, { start: 15, end: 19, text: 'VIER' },
+    ], 'eins zwei drei vier.');
+    assert.strictEqual(written, 1, 'nur die erste Korrektur');
+    assert.strictEqual((await bridge.run('document.text', {})).text, 'eins zwei drei VIER.\nAnderer Absatz.');
+  } finally { bridge.close(); }
+});

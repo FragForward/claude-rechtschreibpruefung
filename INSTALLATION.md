@@ -90,7 +90,7 @@ Die Einbindung in den WhatsApp-Client Altus liegt im Fork https://github.com/Fra
 
 WordCraft (ArtCraft) nimmt keine fremden Unterstreichungen an. Die Rechtschreibung beim Tippen macht WordCraft selbst, Claude prüft im Hintergrund (Spezifikation: [docs/spec/wordcraft.md](docs/spec/wordcraft.md)).
 
-1. `installieren.ps1` setzt die Benutzervariable `WORDCRAFT_CONTROL_PORT=47613` (Steuerschnittstelle, nur von diesem PC erreichbar), legt `hostwordcraftstart.vbs` an, trägt den Dienst in den Autostart ein und startet ihn. Danach **WordCraft einmal ganz beenden und neu öffnen**.
+1. `installieren.ps1` setzt die Benutzervariable `WORDCRAFT_CONTROL_PORT=47613` (Steuerschnittstelle, nur von diesem PC erreichbar), legt `host\wordcraft\start.vbs` an, trägt den Dienst in den Autostart ein und startet ihn. Danach **WordCraft einmal ganz beenden und neu öffnen**.
    - Prüfen: `Get-NetTCPConnection -State Listen -LocalPort 47613` zeigt WordCraft; im Protokoll steht `WordCraft verbunden`.
 2. In WordCraft: Datei > Optionen > Sprache das Herunterladen von Sprachpaketen erlauben, Paket **Deutsch (Österreich)** installieren; Text markieren > Überprüfen > Sprache > Deutsch (Österreich), "Als Standard".
 3. Bedienung: Absatz fertig schreiben, in einen anderen Absatz wechseln, 5 Sekunden Pause: Korrekturen erscheinen als nachverfolgte Änderungen von "Claude" (Überprüfen > Annehmen/Ablehnen). Verbessern: Kommentar "claude" auf eine Markierung oder einen Absatz, "claude alles" für das ganze Dokument.

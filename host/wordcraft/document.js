@@ -33,7 +33,9 @@ function mapParagraph(raw, runs = []) {
   offsets.push(byte);
   // A position right after a deletion or anchor maps to the start of the next readable character.
   const toRaw = i => offsets[Math.max(0, Math.min(i, offsets.length - 1))];
-  return { clean, toRaw, anchors, rawBytes: byte };
+  // Readable position of a raw byte offset (the last readable character starting at or before it).
+  const fromRaw = b => { let i = 0; while (i + 1 < offsets.length && offsets[i + 1] <= b) i++; return i; };
+  return { clean, toRaw, fromRaw, anchors, rawBytes: byte };
 }
 
 /** One paragraph by its top-level index, with readable text, mapping and comment anchors in order. */
