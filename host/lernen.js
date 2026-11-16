@@ -3,34 +3,19 @@
 const fs = require('fs');
 const path = require('path');
 const { log } = require('./log');
+const { knownWords } = require('./wordcheck');
 
 const STANDARD = { modell: 'sonnet', modellAssistent: 'sonnet', autoSchwelle: 3, pauseMinuten: 10, maxAnfragenProSitzung: 150, maxStundenProSitzung: 8 };
 const TYPEN = new Set(['rechtschreibung', 'grammatik', 'stil']);
 
-// Lowercase words that often open a sentence; the dictionary only derives some of them through affix rules.
+// Lowercase words that often open a sentence; as autocorrect targets they are stored in lowercase.
 const FUNCTION_WORDS = new Set(['wenn', 'falls', 'dass', 'weil', 'ob', 'aber', 'und', 'oder', 'auch', 'noch', 'dann', 'also',
   'bitte', 'hier', 'jetzt', 'schon', 'ich', 'wir', 'du', 'ihr', 'sie', 'er', 'es', 'das', 'die', 'der', 'den', 'dem', 'ein',
   'eine', 'einen', 'nicht', 'nur', 'mal', 'gerade', 'heute', 'morgen', 'danke', 'ja', 'nein', 'wie', 'was', 'wo', 'wann']);
+const BACKUPS_KEPT = 5;
 
-let dictionaryWords = null;
-
-/** Lowercase stems of the German spelling dictionaries from WordCraft's language packs (empty if none). */
-function dictionary() {
-  if (dictionaryWords) return dictionaryWords;
-  dictionaryWords = new Set();
-  const root = path.join(process.env.LOCALAPPDATA || '', 'Craft Fonts', 'language-packs');
-  let packs = [];
-  try { packs = fs.readdirSync(root).filter(d => /^de/i.test(d)); } catch (e) { /* no packs */ }
-  for (const p of packs) {
-    try {
-      for (const line of fs.readFileSync(path.join(root, p, 'spelling.dic'), 'utf8').split('\n')) {
-        const word = line.split('/')[0].trim();
-        if (word && !word.startsWith('#')) dictionaryWords.add(word.toLowerCase());
-      }
-    } catch (e) { /* unreadable pack */ }
-  }
-  return dictionaryWords;
-}
+/** Strips punctuation the model attached to a target ("können," -> "können"). */
+function bareTarget(nach) { return String(nach || '').replace(/[.,;:!?]+$/u, '').trim(); }
 
 /** Target as stored: function words in lowercase ("Falls" -> "falls"); the checker handles sentence starts. */
 function targetForm(von, nach) {
@@ -41,8 +26,10 @@ function targetForm(von, nach) {
 }
 
 class Lernen {
-  constructor(ordner) {
+  /** wordCheck(words) resolves to the real words among them (default: Windows spell checker). */
+  constructor(ordner, { wordCheck = knownWords } = {}) {
     this.ordner = ordner;
+    this.wordCheck = wordCheck;
     fs.mkdirSync(path.join(ordner, 'profil-archiv'), { recursive: true });
     this.letzteAktivitaet = 0;
   }
@@ -88,43 +75,64 @@ class Lernen {
     return liste;
   }
 
-  /**
-   * Autocorrect list without entries that may never be automatic (spec autokorrektur K2-K5); such entries are
-   * removed from the file once, with a backup.
-   */
-  autokorrektur() {
-    const liste = this.lesenJson('autokorrektur.json', {});
-    const weg = Object.keys(liste).filter(von => !this.autokorrekturErlaubt(von, liste[von], liste));
-    const klein = Object.keys(liste).filter(von => !weg.includes(von) && targetForm(von, liste[von]) !== liste[von]);
-    if (!weg.length && !klein.length) return liste;
-    fs.copyFileSync(this.datei('autokorrektur.json'), this.datei('autokorrektur.json.' + new Date().toISOString().replace(/[:.]/g, '-')));
-    for (const von of weg) delete liste[von];
-    for (const von of klein) liste[von] = targetForm(von, liste[von]);
-    this.schreibenJson('autokorrektur.json', liste);
-    log('Autokorrektur bereinigt, entfernt:', weg.join(', ') || '-', '; klein gespeichert:', klein.join(', ') || '-');
-    return liste;
+  autokorrektur() { return this.lesenJson('autokorrektur.json', {}); }
+
+  /** Rules that need no word check, with the data read once for many calls (spec autokorrektur K3, K4). */
+  autokorrekturKontext() {
+    const ziele = new Set();
+    for (const k of Object.values(this.korrekturen())) {
+      if (k && typeof k.nach === 'string' && (k.anzahl || 0) >= 2) ziele.add(bareTarget(k.nach).toLowerCase());
+    }
+    return { liste: this.autokorrektur(), woerterbuch: new Set(this.woerterbuch().map(w => w.toLowerCase())), ziele };
   }
 
-  /**
-   * May "von" be replaced automatically? Only pure typos: not a dictionary word, not only case or punctuation,
-   * not the target of another correction, no reverse entry (16.11.2026: "wird" -> "wir").
-   */
-  autokorrekturErlaubt(von, nach, liste = this.lesenJson('autokorrektur.json', {})) {
-    if (!von || !nach) return false;
-    if (von.toLowerCase() === nach.toLowerCase()) return false;
-    if (/[^\p{L}\p{N}\s-]/u.test(nach)) return false;
+  autokorrekturRegeln(von, nach, ctx) {
+    if (!/^[\p{L}\p{N}]+$/u.test(von || '')) return false;
+    if (!nach || /[^\p{L}\p{N}\s-]/u.test(nach)) return false;
     const klein = von.toLowerCase();
-    if (dictionary().has(klein)) return false;
-    if (this.woerterbuch().some(w => w.toLowerCase() === klein)) return false;
-    if (liste[nach] !== undefined && liste[nach].toLowerCase() === klein) return false;
-    if (Object.values(this.korrekturen()).some(k => k && typeof k.nach === 'string' && k.nach.toLowerCase() === klein)) return false;
-    return true;
+    if (klein === nach.toLowerCase()) return false;
+    if (ctx.woerterbuch.has(klein) || ctx.ziele.has(klein)) return false;
+    const rueck = ctx.liste[nach];
+    return !(rueck !== undefined && rueck.toLowerCase() === klein);
   }
 
-  /** "Immer automatisch" from the extension: refused for words that may not be automatic (K6). */
-  autokorrekturSetzen(von, nach) {
-    if (nach && !this.autokorrekturErlaubt(von, nach)) return { autokorrektur: this.autokorrektur(), abgelehnt: true };
-    return { autokorrektur: this.autokorrekturAendern(von, nach ? targetForm(von, nach) : nach) };
+  /**
+   * May "von" be replaced by "nach" automatically? Only pure typos: no real word (Windows spell checker), not only
+   * case or punctuation, not a frequent correction target, no reverse entry (16.11.2026: "wird" -> "wir").
+   */
+  async autokorrekturErlaubt(von, nach, ctx = this.autokorrekturKontext()) {
+    const ziel = targetForm(von, bareTarget(nach));
+    if (!this.autokorrekturRegeln(von, ziel, ctx)) return null;
+    const echt = await this.wordCheck([von, von.toLowerCase()]);
+    return echt.size ? null : ziel;
+  }
+
+  /** Removes entries that may not be automatic and normalizes targets; once at host start, with a backup (K5, K7). */
+  async autokorrekturBereinigen() {
+    const ctx = this.autokorrekturKontext();
+    const liste = ctx.liste;
+    const echt = await this.wordCheck(Object.keys(liste).flatMap(v => [v, v.toLowerCase()]));
+    const neu = {}, weg = [];
+    for (const [von, nach] of Object.entries(liste)) {
+      const ziel = targetForm(von, bareTarget(nach));
+      if (echt.has(von) || echt.has(von.toLowerCase()) || !this.autokorrekturRegeln(von, ziel, ctx)) weg.push(von + ' -> ' + nach);
+      else neu[von] = ziel;
+    }
+    if (!weg.length && JSON.stringify(neu) === JSON.stringify(liste)) return liste;
+    fs.copyFileSync(this.datei('autokorrektur.json'), this.datei('autokorrektur.json.' + new Date().toISOString().replace(/[:.]/g, '-')));
+    const alt = fs.readdirSync(this.ordner).filter(d => /^autokorrektur\.json\.\d{4}-/.test(d)).sort();
+    for (const d of alt.slice(0, Math.max(0, alt.length - BACKUPS_KEPT))) fs.unlinkSync(this.datei(d));
+    this.schreibenJson('autokorrektur.json', neu);
+    log('Autokorrektur bereinigt, entfernt:', weg.join(', ') || '-');
+    return neu;
+  }
+
+  /** "Immer automatisch" from the extension or the options page: refused when not allowed (K6). */
+  async autokorrekturSetzen(von, nach) {
+    if (!nach) return { autokorrektur: this.autokorrekturAendern(von, '') };
+    const ziel = await this.autokorrekturErlaubt(von, nach);
+    if (!ziel) return { autokorrektur: this.autokorrektur(), abgelehnt: true };
+    return { autokorrektur: this.autokorrekturAendern(von, ziel) };
   }
 
   autokorrekturAendern(von, nach) {
@@ -217,7 +225,7 @@ class Lernen {
    * Verbucht eine Nutzeraktion. Übernommene, eindeutige Tippfehler werden gezählt;
    * ab der Schwelle wird genau dieses Wort automatisch korrigiert (Festlegung 01.10.2026).
    */
-  aktion(n) {
+  async aktion(n) {
     const eintrag = { art: n.aktion, von: String(n.von || '').slice(0, 2000), nach: String(n.nach || '').slice(0, 2000), typ: n.typ || '' };
     this.journal(eintrag);
     if (n.aktion !== 'uebernommen' || !n.von || !n.nach || n.typ === 'satz') return {};
@@ -233,11 +241,13 @@ class Lernen {
 
     let auto = this.autokorrektur();
     let neuAutomatisch = false;
-    const einzelwort = /^[\p{L}\p{N}]+$/u.test(n.von);
-    if (z.eindeutig && einzelwort && z.anzahl >= this.einstellungen().autoSchwelle && !auto[n.von] && this.autokorrekturErlaubt(n.von, n.nach, auto)) {
-      auto = this.autokorrekturAendern(n.von, targetForm(n.von, n.nach));
-      neuAutomatisch = true;
-      log('Neue Autokorrektur:', schluessel, 'nach', z.anzahl, 'Übernahmen');
+    if (z.eindeutig && z.anzahl >= this.einstellungen().autoSchwelle && !auto[n.von]) {
+      const ziel = await this.autokorrekturErlaubt(n.von, n.nach);
+      if (ziel) {
+        auto = this.autokorrekturAendern(n.von, ziel);
+        neuAutomatisch = true;
+        log('Neue Autokorrektur:', n.von, '->', ziel, 'nach', z.anzahl, 'Übernahmen');
+      }
     }
     return { autokorrektur: auto, neuAutomatisch, anzahl: z.anzahl };
   }

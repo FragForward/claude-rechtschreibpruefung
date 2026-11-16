@@ -41,7 +41,11 @@ async function laden() {
   for (const z of liste) {
     const istAuto = d.autokorrektur[z.von] === z.nach;
     zeile($('zaehl'), [z.von, z.nach, String(z.anzahl), z.eindeutig ? 'ja' : 'nein'],
-      istAuto ? null : { text: 'Automatisch machen', aktion: async () => { await senden({ art: 'autokorrektur_setzen', von: z.von, nach: z.nach }); laden(); } });
+      istAuto ? null : { text: 'Automatisch machen', aktion: async () => {
+        const a = await senden({ art: 'autokorrektur_setzen', von: z.von, nach: z.nach });
+        await laden();
+        if (a && a.abgelehnt) { $('status').textContent = '"' + z.von + '" ist ein richtiges Wort oder hängt vom Satz ab und wird deshalb nicht automatisch ersetzt.'; $('status').className = 'fehler'; }
+      } });
   }
 
   kopf($('wb'), ['Wort']);
