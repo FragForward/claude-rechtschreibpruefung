@@ -3,13 +3,33 @@
 const fs = require('fs');
 const path = require('path');
 const { log } = require('./log');
+const { knownWords } = require('./wordcheck');
 
 const STANDARD = { modell: 'sonnet', modellAssistent: 'sonnet', autoSchwelle: 3, pauseMinuten: 10, maxAnfragenProSitzung: 150, maxStundenProSitzung: 8 };
 const TYPEN = new Set(['rechtschreibung', 'grammatik', 'stil']);
 
+// Lowercase words that often open a sentence; as autocorrect targets they are stored in lowercase.
+const FUNCTION_WORDS = new Set(['wenn', 'falls', 'dass', 'weil', 'ob', 'aber', 'und', 'oder', 'auch', 'noch', 'dann', 'also',
+  'bitte', 'hier', 'jetzt', 'schon', 'ich', 'wir', 'du', 'ihr', 'sie', 'er', 'es', 'das', 'die', 'der', 'den', 'dem', 'ein',
+  'eine', 'einen', 'nicht', 'nur', 'mal', 'gerade', 'heute', 'morgen', 'danke', 'ja', 'nein', 'wie', 'was', 'wo', 'wann']);
+const BACKUPS_KEPT = 5;
+
+/** Strips punctuation the model attached to a target ("können," -> "können"). */
+function bareTarget(nach) { return String(nach || '').replace(/[.,;:!?]+$/u, '').trim(); }
+
+/** Target as stored: function words in lowercase ("Falls" -> "falls"); the checker handles sentence starts. */
+function targetForm(von, nach) {
+  if (!/^\p{Ll}/u.test(von) || !/^\p{Lu}\p{Ll}*$/u.test(nach)) return nach;
+  const lower = nach.toLowerCase();
+  if (FUNCTION_WORDS.has(lower)) return lower;
+  return nach;
+}
+
 class Lernen {
-  constructor(ordner) {
+  /** wordCheck(words) resolves to the real words among them (default: Windows spell checker). */
+  constructor(ordner, { wordCheck = knownWords } = {}) {
     this.ordner = ordner;
+    this.wordCheck = wordCheck;
     fs.mkdirSync(path.join(ordner, 'profil-archiv'), { recursive: true });
     this.letzteAktivitaet = 0;
   }
@@ -56,6 +76,71 @@ class Lernen {
   }
 
   autokorrektur() { return this.lesenJson('autokorrektur.json', {}); }
+
+  /** Rules that need no word check, with the data read once for many calls (spec autokorrektur K3, K4). */
+  autokorrekturKontext() {
+    const zaehler = new Map(), paare = new Set();
+    for (const k of Object.values(this.korrekturen())) {
+      if (!k || typeof k.nach !== 'string' || typeof k.von !== 'string') continue;
+      const ziel = bareTarget(k.nach).toLowerCase();
+      zaehler.set(ziel, (zaehler.get(ziel) || 0) + (k.anzahl || 0));
+      if ((k.anzahl || 0) >= 2) paare.add(k.von.toLowerCase() + '\u0000' + ziel);
+    }
+    const ziele = new Set([...zaehler].filter(([, n]) => n >= 2).map(([z]) => z));
+    const liste = this.autokorrektur();
+    for (const [von, nach] of Object.entries(liste)) paare.add(von.toLowerCase() + '\u0000' + String(nach).toLowerCase());
+    return { liste, woerterbuch: new Set(this.woerterbuch().map(w => w.toLowerCase())), ziele, paare };
+  }
+
+  autokorrekturRegeln(von, nach, ctx) {
+    if (!/^[\p{L}\p{N}]+$/u.test(von || '')) return false;
+    if (!nach || /[^\p{L}\p{N}\s-]/u.test(nach)) return false;
+    const klein = von.toLowerCase();
+    if (klein === nach.toLowerCase()) return false;
+    if (ctx.woerterbuch.has(klein) || ctx.ziele.has(klein)) return false;
+    return !ctx.paare.has(nach.toLowerCase() + '\u0000' + klein);
+  }
+
+  /**
+   * May "von" be replaced by "nach" automatically? Only pure typos: no real word (Windows spell checker), not only
+   * case or punctuation, not a frequent correction target, no reverse entry (16.11.2026: "wird" -> "wir").
+   */
+  async autokorrekturErlaubt(von, nach, ctx = this.autokorrekturKontext()) {
+    const ziel = targetForm(von, bareTarget(nach));
+    if (!this.autokorrekturRegeln(von, ziel, ctx)) return null;
+    const echt = await this.wordCheck([von, von.toLowerCase()]);
+    return echt.failed || echt.size ? null : ziel;
+  }
+
+  /** Removes entries that may not be automatic and normalizes targets; once at host start, with a backup (K5, K7). */
+  async autokorrekturBereinigen() {
+    const ctx = this.autokorrekturKontext();
+    const liste = ctx.liste;
+    if (!liste || typeof liste !== 'object' || Array.isArray(liste)) return liste;
+    const echt = await this.wordCheck(Object.keys(liste).flatMap(v => [v, v.toLowerCase()]));
+    if (echt.failed) return liste;
+    const neu = {}, weg = [];
+    for (const [von, nach] of Object.entries(liste)) {
+      const ziel = targetForm(von, bareTarget(nach));
+      if (echt.has(von) || echt.has(von.toLowerCase()) || !this.autokorrekturRegeln(von, ziel, ctx)) weg.push(von + ' -> ' + nach);
+      else neu[von] = ziel;
+    }
+    if (!weg.length && JSON.stringify(neu) === JSON.stringify(liste)) return liste;
+    fs.copyFileSync(this.datei('autokorrektur.json'), this.datei('autokorrektur.json.' + new Date().toISOString().replace(/[:.]/g, '-')));
+    const alt = fs.readdirSync(this.ordner).filter(d => /^autokorrektur\.json\.\d{4}-/.test(d)).sort();
+    for (const d of alt.slice(0, Math.max(0, alt.length - BACKUPS_KEPT))) fs.unlinkSync(this.datei(d));
+    this.schreibenJson('autokorrektur.json', neu);
+    log('Autokorrektur bereinigt, entfernt:', weg.join(', ') || '-');
+    return neu;
+  }
+
+  /** "Immer automatisch" from the extension or the options page: refused when not allowed (K6). */
+  async autokorrekturSetzen(von, nach) {
+    if (!nach) return { autokorrektur: this.autokorrekturAendern(von, '') };
+    const ziel = await this.autokorrekturErlaubt(von, nach);
+    if (!ziel) return { autokorrektur: this.autokorrektur(), abgelehnt: true };
+    return { autokorrektur: this.autokorrekturAendern(von, ziel) };
+  }
 
   autokorrekturAendern(von, nach) {
     const liste = this.autokorrektur();
@@ -147,7 +232,7 @@ class Lernen {
    * Verbucht eine Nutzeraktion. Übernommene, eindeutige Tippfehler werden gezählt;
    * ab der Schwelle wird genau dieses Wort automatisch korrigiert (Festlegung 01.10.2026).
    */
-  aktion(n) {
+  async aktion(n) {
     const eintrag = { art: n.aktion, von: String(n.von || '').slice(0, 2000), nach: String(n.nach || '').slice(0, 2000), typ: n.typ || '' };
     this.journal(eintrag);
     if (n.aktion !== 'uebernommen' || !n.von || !n.nach || n.typ === 'satz') return {};
@@ -163,11 +248,13 @@ class Lernen {
 
     let auto = this.autokorrektur();
     let neuAutomatisch = false;
-    const einzelwort = /^[\p{L}\p{N}]+$/u.test(n.von);
-    if (z.eindeutig && einzelwort && z.anzahl >= this.einstellungen().autoSchwelle && !auto[n.von]) {
-      auto = this.autokorrekturAendern(n.von, n.nach);
-      neuAutomatisch = true;
-      log('Neue Autokorrektur:', schluessel, 'nach', z.anzahl, 'Übernahmen');
+    if (z.eindeutig && z.anzahl >= this.einstellungen().autoSchwelle && !auto[n.von]) {
+      const ziel = await this.autokorrekturErlaubt(n.von, n.nach);
+      if (ziel) {
+        auto = this.autokorrekturAendern(n.von, ziel);
+        neuAutomatisch = true;
+        log('Neue Autokorrektur:', n.von, '->', ziel, 'nach', z.anzahl, 'Übernahmen');
+      }
     }
     return { autokorrektur: auto, neuAutomatisch, anzahl: z.anzahl };
   }

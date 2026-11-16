@@ -45,6 +45,8 @@ logStarten(DATEN);
 log('Host gestartet, Daten in', DATEN);
 
 const lernen = new Lernen(DATEN);
+// Einmal je Start: Einträge der Autokorrektur entfernen, die nie automatisch sein dürfen (docs/spec/autokorrektur.md K5).
+lernen.autokorrekturBereinigen().catch(() => {});
 /** Claude-Modell; ist Gemini für die Prüfung eingestellt, laufen Auswertung und Reserve mit Sonnet. */
 const claudeModell = () => (/^gemini/.test(lernen.einstellungen().modell) ? 'sonnet' : lernen.einstellungen().modell);
 const sitzung = new Sitzung({
@@ -165,7 +167,7 @@ async function bearbeiten(n) {
       return { autokorrektur: lernen.autokorrektur() };
 
     case 'autokorrektur_setzen':
-      return { autokorrektur: lernen.autokorrekturAendern(String(n.von), n.nach ? String(n.nach) : '') };
+      return lernen.autokorrekturSetzen(String(n.von), n.nach ? String(n.nach) : '');
 
     case 'woerterbuch_setzen':
       return { woerterbuch: lernen.woerterbuchAendern(String(n.wort), n.hinzu !== false) };

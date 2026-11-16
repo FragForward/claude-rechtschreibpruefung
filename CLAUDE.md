@@ -52,6 +52,9 @@ Ablauf je Änderung: globaler Skill `feature-ablauf`.
 
 ## Was nie passieren darf
 
+- **Entwickeln nie im Live-Ordner:** `host.cmd` und der WordCraft-Dienst laufen aus `.claude/worktrees/erstversion`, und der Host startet bei geändertem Code von selbst neu. Ein dort ausgecheckter Branch ist sofort live (16.11.2026: halbfertige Autokorrektur-Bereinigung lief auf echten Daten). Entwickeln in einem eigenen Worktree, den Live-Ordner erst nach dem Merge auf `origin/master` setzen.
+- **Tests nie gegen das laufende WordCraft des Users** (Port 47613): Befehle ohne Dokumentangabe landen dort im falschen Dokument (12.11.2026 Roadmap überschrieben, per Rückgängig wiederhergestellt).
+
 - Lizenz- oder API-Schlüssel ins Repo; Schlüssel liegen als Benutzer-Umgebungsvariablen.
 - Texte des Schreibers an Dienste schicken, die nicht in den Einstellungen gewählt sind.
 - In WordCraft Text ohne Änderungsverfolgung ändern.
