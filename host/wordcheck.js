@@ -1,6 +1,7 @@
 'use strict';
 // Real-word check with the Windows spell checker (wordcheck.ps1, language de-AT, else de-DE). Results are cached
 // for the life of the process; without a German spell checker every word counts as unknown (spec autokorrektur R1).
+// If the check itself fails, the result carries failed = true and callers must not decide on it.
 const { execFile } = require('child_process');
 const path = require('path');
 
@@ -14,10 +15,11 @@ function knownWords(words) {
   return new Promise(resolve => {
     const child = execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', SCRIPT],
       { windowsHide: true, timeout: 60000, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) => {
-        let known = [];
+        let known = null;
         if (!err) { try { known = JSON.parse(stdout).known || []; } catch (e) { /* no answer */ } }
+        if (!known) { const failed = new Set(); failed.failed = true; resolve(failed); return; }
         const set = new Set(known);
-        if (!err) for (const w of open) cache.set(w, set.has(w));
+        for (const w of open) cache.set(w, set.has(w));
         resolve(new Set(words.filter(w => cache.get(w) || set.has(w))));
       });
     child.stdin.end(open.join('\n') + '\n', 'utf8');

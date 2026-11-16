@@ -79,11 +79,17 @@ class Lernen {
 
   /** Rules that need no word check, with the data read once for many calls (spec autokorrektur K3, K4). */
   autokorrekturKontext() {
-    const ziele = new Set();
+    const zaehler = new Map(), paare = new Set();
     for (const k of Object.values(this.korrekturen())) {
-      if (k && typeof k.nach === 'string' && (k.anzahl || 0) >= 2) ziele.add(bareTarget(k.nach).toLowerCase());
+      if (!k || typeof k.nach !== 'string' || typeof k.von !== 'string') continue;
+      const ziel = bareTarget(k.nach).toLowerCase();
+      zaehler.set(ziel, (zaehler.get(ziel) || 0) + (k.anzahl || 0));
+      if ((k.anzahl || 0) >= 2) paare.add(k.von.toLowerCase() + '\u0000' + ziel);
     }
-    return { liste: this.autokorrektur(), woerterbuch: new Set(this.woerterbuch().map(w => w.toLowerCase())), ziele };
+    const ziele = new Set([...zaehler].filter(([, n]) => n >= 2).map(([z]) => z));
+    const liste = this.autokorrektur();
+    for (const [von, nach] of Object.entries(liste)) paare.add(von.toLowerCase() + '\u0000' + String(nach).toLowerCase());
+    return { liste, woerterbuch: new Set(this.woerterbuch().map(w => w.toLowerCase())), ziele, paare };
   }
 
   autokorrekturRegeln(von, nach, ctx) {
@@ -92,8 +98,7 @@ class Lernen {
     const klein = von.toLowerCase();
     if (klein === nach.toLowerCase()) return false;
     if (ctx.woerterbuch.has(klein) || ctx.ziele.has(klein)) return false;
-    const rueck = ctx.liste[nach];
-    return !(rueck !== undefined && rueck.toLowerCase() === klein);
+    return !ctx.paare.has(nach.toLowerCase() + '\u0000' + klein);
   }
 
   /**
@@ -104,14 +109,16 @@ class Lernen {
     const ziel = targetForm(von, bareTarget(nach));
     if (!this.autokorrekturRegeln(von, ziel, ctx)) return null;
     const echt = await this.wordCheck([von, von.toLowerCase()]);
-    return echt.size ? null : ziel;
+    return echt.failed || echt.size ? null : ziel;
   }
 
   /** Removes entries that may not be automatic and normalizes targets; once at host start, with a backup (K5, K7). */
   async autokorrekturBereinigen() {
     const ctx = this.autokorrekturKontext();
     const liste = ctx.liste;
+    if (!liste || typeof liste !== 'object' || Array.isArray(liste)) return liste;
     const echt = await this.wordCheck(Object.keys(liste).flatMap(v => [v, v.toLowerCase()]));
+    if (echt.failed) return liste;
     const neu = {}, weg = [];
     for (const [von, nach] of Object.entries(liste)) {
       const ziel = targetForm(von, bareTarget(nach));

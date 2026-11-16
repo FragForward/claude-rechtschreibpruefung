@@ -39,7 +39,7 @@ async function laden() {
   kopf($('zaehl'), ['Falsch', 'Richtig', 'Anzahl', 'Eindeutig']);
   const liste = Object.values(d.korrekturen).sort((a, b) => b.anzahl - a.anzahl);
   for (const z of liste) {
-    const istAuto = d.autokorrektur[z.von] === z.nach;
+    const istAuto = d.autokorrektur[z.von] !== undefined;
     zeile($('zaehl'), [z.von, z.nach, String(z.anzahl), z.eindeutig ? 'ja' : 'nein'],
       istAuto ? null : { text: 'Automatisch machen', aktion: async () => {
         const a = await senden({ art: 'autokorrektur_setzen', von: z.von, nach: z.nach });

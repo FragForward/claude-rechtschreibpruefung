@@ -100,3 +100,20 @@ test('Windows-Rechtschreibprüfung erkennt echte Wörter und Formen, nicht aber 
   if (!k.size) { t.skip('keine deutsche Rechtschreibprüfung in Windows'); return; }
   assert.deepStrictEqual([...k].sort(), ['das', 'lasen', 'machte', 'wird', 'wäre'].sort());
 });
+
+test('Prüfbericht: fällt die Wortprüfung aus, wird nichts gelernt und nichts entfernt', async () => {
+  const kaputt = async () => { const s = new Set(); s.failed = true; return s; };
+  const { lernen } = neu({ wird: 'wir', ncihts: 'nichts' }, {}, kaputt);
+  assert.ok(!(await uebernehmen(lernen, 'machte', 'macht')).neuAutomatisch);
+  assert.deepStrictEqual(await lernen.autokorrekturBereinigen(), { wird: 'wir', ncihts: 'nichts' });
+});
+
+test('K4 (Prüfbericht): Ziel über mehrere Einträge gezählt, Gegenrichtung auch aus der Zählliste und groß', async () => {
+  const keine = async () => new Set();
+  const { lernen } = neu({}, {
+    'wri -> wir': { von: 'wri', nach: 'wir', anzahl: 1 }, 'wiir -> wir': { von: 'wiir', nach: 'wir', anzahl: 1 },
+    'Wird -> wrid': { von: 'Wird', nach: 'wrid', anzahl: 2 },
+  }, keine);
+  assert.strictEqual(await lernen.autokorrekturErlaubt('wir', 'wird'), null, 'Ziel zweimal');
+  assert.strictEqual(await lernen.autokorrekturErlaubt('wrid', 'Wird'), null, 'Gegenrichtung aus der Zählliste');
+});
