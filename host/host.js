@@ -165,7 +165,7 @@ async function bearbeiten(n) {
       return { autokorrektur: lernen.autokorrektur() };
 
     case 'autokorrektur_setzen':
-      return { autokorrektur: lernen.autokorrekturAendern(String(n.von), n.nach ? String(n.nach) : '') };
+      return lernen.autokorrekturSetzen(String(n.von), n.nach ? String(n.nach) : '');
 
     case 'woerterbuch_setzen':
       return { woerterbuch: lernen.woerterbuchAendern(String(n.wort), n.hinzu !== false) };

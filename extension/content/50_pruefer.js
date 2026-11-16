@@ -302,8 +302,12 @@ class RspPruefer {
   }
 
   immerAutomatisch(d, f) {
-    rspSenden({ art: 'autokorrektur_setzen', von: f.wort, nach: f.vorschlag }).then(a => this.auto.setzen(a.autokorrektur));
-    this.ebene.hinweis(`"${f.wort}" wird ab jetzt automatisch zu "${f.vorschlag}" korrigiert.`);
+    rspSenden({ art: 'autokorrektur_setzen', von: f.wort, nach: f.vorschlag }).then(a => {
+      if (a.autokorrektur) this.auto.setzen(a.autokorrektur);
+      this.ebene.hinweis(a.abgelehnt
+        ? `"${f.wort}" ist auch ein richtiges Wort und wird deshalb nie automatisch ersetzt, nur diesmal.`
+        : `"${f.wort}" wird ab jetzt automatisch zu "${f.vorschlag}" korrigiert.`);
+    });
     this.wortErsetzen(d, f.vorschlag);
   }
 }
