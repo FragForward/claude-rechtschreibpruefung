@@ -5,6 +5,7 @@ const fs = require('fs');
 const { log, logStarten } = require('./log');
 const { Sitzung } = require('./sitzung');
 const { GeminiSitzung } = require('./gemini');
+const { createFallback, downReason } = require('./fallback');
 const { Lernen, einsetzen, letztesJson } = require('./lernen');
 const prompt = require('./prompt');
 const assistent = require('./assistent');
@@ -13,26 +14,6 @@ const assistent = require('./assistent');
  * Gegenprüfung nur, wo Vorschläge zusammenwirken können: ab zwei Befunden oder bei einem Befund, der mehr als
  * Groß-/Kleinschreibung oder ein Satzzeichen ändert (spart bei langen Mails die halbe Wartezeit; 12.10.2026).
  */
-let anmeldungNeustart = 0;
-const ANMELDUNG_ABGELAUFEN = /authenticat|oauth|log ?in|credential/i;
-const ANMELDE_HINWEIS = 'Claude-Anmeldung abgelaufen: in einem Terminal "claude" starten und /login ausführen.';
-
-/**
- * Fragt die Sitzung; ist die Claude-Anmeldung abgelaufen, übernimmt Gemini, wenn es eingestellt ist (29.10.2026).
- */
-async function fragenMitAusweich(s, text, zeitlimit, gruppe, vorne) {
-  try {
-    return await s.fragen(text, zeitlimit, gruppe, vorne);
-  } catch (e) {
-    if (s !== sitzung || !ANMELDUNG_ABGELAUFEN.test(e.message)) throw e;
-    // Neu laden, damit eine inzwischen erneuerte Anmeldung (claude /login) beim nächsten Mal greift.
-    if (Date.now() - anmeldungNeustart > 60000) { anmeldungNeustart = Date.now(); sitzung.neustarten(); }
-    if (!geminiAktiv()) throw new Error(ANMELDE_HINWEIS);
-    log('Claude nicht angemeldet, Gemini übernimmt');
-    return geminiSitzung.fragen(text, zeitlimit, gruppe, vorne);
-  }
-}
-
 function gegenpruefungNoetig(fehler) {
   if (fehler.length !== 1) return fehler.length > 1;
   const kern = t => t.toLowerCase().replace(/[.,;:!?]/g, '').trim();
@@ -69,6 +50,16 @@ const geminiSitzung = new GeminiSitzung({
  */
 const GEMINI_MAX_WOERTER = 20;
 const geminiAktiv = () => /^gemini/.test(lernen.einstellungen().modell);
+let claudeNeustart = 0;
+// Fällt ein Anbieter aus (Anmeldung, Monatslimit, Guthaben), springt der andere ein (docs/spec/anbieter.md).
+const fragenMitAusweich = createFallback({
+  claude: sitzung,
+  gemini: geminiSitzung,
+  geminiActive: () => geminiAktiv(),
+  log,
+  // Neu laden, damit eine erneuerte Anmeldung oder ein neuer Monat beim nächsten Versuch greift.
+  onClaudeDown: () => { if (Date.now() - claudeNeustart > 60000) { claudeNeustart = Date.now(); sitzung.neustarten(); } },
+});
 const pruefSitzung = (text = '') => (geminiAktiv() && text.trim().split(/\s+/).length < GEMINI_MAX_WOERTER ? geminiSitzung : sitzung);
 let auswertungLaeuft = false;
 const AUSWERTUNG_MIN_EINTRAEGE = 15;
@@ -97,7 +88,7 @@ process.stdin.on('data', stueck => {
       .then(a => senden({ id: n.id, ok: true, ...a }))
       .catch(e => {
         log('Fehler bei', n.art, e.message);
-        senden({ id: n.id, ok: false, fehler: ANMELDUNG_ABGELAUFEN.test(e.message) ? ANMELDE_HINWEIS : e.message });
+        senden({ id: n.id, ok: false, fehler: e.readable ? e.message : downReason('claude', e.message) || e.message });
       })
       .finally(() => { laufend--; });
   }
