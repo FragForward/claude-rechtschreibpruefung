@@ -5,14 +5,20 @@
 const DOWN_MS = 10 * 60000;
 
 const REASONS = [
-  { re: /authenticat|oauth|credential|log ?in/i, claude: 'Claude-Anmeldung abgelaufen: in einem Terminal "claude" starten und /login ausführen.' },
-  { re: /spend limit|usage limit|rate limit|limit reached/i, claude: 'Claude-Monatslimit erreicht: im Claude-Konto die Ausgabengrenze erhöhen oder auf den neuen Monat warten.', gemini: 'Gemini-Kontingent erschöpft: später erneut oder in den Optionen „Sonnet“ wählen.' },
-  { re: /credits are depleted|prepayment|billing|quota|RESOURCE_EXHAUSTED|insufficient/i, gemini: 'Gemini-Guthaben aufgebraucht: in Google AI Studio aufladen oder in den Optionen „Sonnet“ wählen.' },
+  { re: /authenticat|oauth|credential|log ?in|api key not valid/i,
+    claude: 'Claude-Anmeldung abgelaufen: in einem Terminal "claude" starten und /login ausführen.',
+    gemini: 'Gemini-Schlüssel ungültig: GEMINI_API_KEY prüfen.' },
+  { re: /spend limit|usage limit|rate limit|limit reached/i,
+    claude: 'Claude-Monatslimit erreicht: im Claude-Konto die Ausgabengrenze erhöhen oder auf den neuen Monat warten.',
+    gemini: 'Gemini-Kontingent erschöpft: später erneut oder in den Optionen „Sonnet“ wählen.' },
+  { re: /credits are depleted|prepayment|billing|quota|RESOURCE_EXHAUSTED|insufficient/i,
+    claude: 'Claude-Konto: Zahlung oder Kontingent erschöpft, im Claude-Konto nachsehen.',
+    gemini: 'Gemini-Guthaben aufgebraucht: in Google AI Studio aufladen oder in den Optionen „Sonnet“ wählen.' },
 ];
 
-/** Readable reason when the error means the provider is down, else null. */
+/** Readable reason for this provider when the error means it is down, else null. */
 function downReason(provider, message) {
-  for (const r of REASONS) if (r.re.test(message || '')) return r[provider] || r.claude || r.gemini;
+  for (const r of REASONS) if (r.re.test(message || '')) return r[provider];
   return null;
 }
 
@@ -56,7 +62,8 @@ function createFallback(deps) {
     }
     const messages = [first, other].map(n => (now() < downUntil[n] ? reasons[n] : '')).filter(Boolean);
     if (!messages.length) messages.push(reasons[first] || 'Prüfung nicht verfügbar');
-    throw new Error(messages.join(' '));
+    // Already readable: the host passes it on unchanged.
+    throw Object.assign(new Error(messages.join(' ')), { readable: true });
   };
 }
 

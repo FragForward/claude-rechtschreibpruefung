@@ -57,3 +57,19 @@ test('R1: andere Fehler ohne Ausweichen', async () => {
   await assert.rejects(e.ask(e.gemini, 'x'), /Zeitüberschreitung/);
   assert.strictEqual(e.claude.calls, 0);
 });
+
+test('K5 (Prüfbericht): Meldungen gehören zum richtigen Anbieter', () => {
+  const { downReason } = require('../host/fallback');
+  assert.match(downReason('claude', 'Failed to authenticate: OAuth session expired'), /Claude-Anmeldung/);
+  assert.match(downReason('gemini', 'API key not valid. invalid authentication credentials'), /Gemini-Schlüssel/);
+  assert.doesNotMatch(downReason('claude', 'billing problem, quota exceeded') || '', /Gemini/);
+  assert.doesNotMatch(downReason('gemini', 'credits are depleted'), /Claude/);
+});
+
+test('K5 (Prüfbericht): gemeinsame Meldung ist als lesbar markiert und bleibt vollständig', async () => {
+  const e = setup({ geminiFehler: 'Your prepayment credits are depleted', claudeFehler: 'Failed to authenticate: OAuth session expired' });
+  const err = await e.ask(e.gemini, 'x').catch(x => x);
+  assert.strictEqual(err.readable, true);
+  assert.match(err.message, /Gemini-Guthaben aufgebraucht/);
+  assert.match(err.message, /Claude-Anmeldung abgelaufen/);
+});

@@ -88,7 +88,7 @@ process.stdin.on('data', stueck => {
       .then(a => senden({ id: n.id, ok: true, ...a }))
       .catch(e => {
         log('Fehler bei', n.art, e.message);
-        senden({ id: n.id, ok: false, fehler: downReason('claude', e.message) || e.message });
+        senden({ id: n.id, ok: false, fehler: e.readable ? e.message : downReason('claude', e.message) || e.message });
       })
       .finally(() => { laufend--; });
   }
