@@ -44,7 +44,7 @@ class RspPruefer {
       this.auto.taste(ev);
     });
     el.addEventListener('input', ev => {
-      this.zuletztGetippt = Date.now();
+      if (!this.auto.inArbeit) this.zuletztGetippt = Date.now(); // eigene Ersetzungen zählen nicht als Tippen
       this.popup.schliessen();
       this.zeichnenBald();
       const satzFertig = (ev.data && RSP_SATZENDE.test(ev.data)) || ev.inputType === 'insertParagraph' || ev.inputType === 'insertLineBreak';

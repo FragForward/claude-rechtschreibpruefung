@@ -17,6 +17,7 @@ Zusammenhang richtig sein kann.
 | K4 | Das falsche Wort ist schon mindestens zweimal Ziel einer übernommenen Korrektur gewesen oder es gibt die Gegenrichtung („wir“ → „wird“); auch nur aus einem Wort bestehende Ausgangswörter zählen (keine Satzzeichen, keine Leerzeichen) | wie K1 | Keine Aufnahme; eine einzelne versehentliche Gegenkorrektur entfernt keinen guten Eintrag |
 | K5 | Die Autokorrektur enthält schon Einträge, die gegen K2 bis K4 verstoßen | Hilfsprogramm startet | Diese Einträge werden einmal beim Start entfernt (Sicherung der alten Liste, höchstens 5 Sicherungen, Eintrag im Protokoll); übrige bleiben; Lesen der Liste schreibt nie |
 | K7 | Das Ziel ist nur am Satzanfang groß („fals“ → „Falls“, „wnen“ → „Wenn“) | Aufnahme oder Start (K5) | Gespeichert wird die kleine Form („falls“); Nomen wie „Kunde“ bleiben groß. Den Satzanfang regelt die Prüfung |
+| K8 | Schreiben in WhatsApp (Altus) oder Slack, deren Editoren den Text selbst verwalten | Schnelles Weitertippen nach einem Wort aus der Autokorrektur | Während des Tippens wird nichts ersetzt; nach 0,7 s Pause werden alle vorgemerkten Wörter ersetzt, die noch als ganzes Wort dastehen; der Cursor bleibt an seiner Stelle. In Thunderbird und normalen Feldern weiter sofort beim Leerzeichen |
 | K6 | Der Schreiber wählt bei einem Vorschlag ausdrücklich „Immer automatisch“ | – | Gilt dieselbe Prüfung wie K2 bis K4; ist sie nicht erfüllt, wird der Vorschlag nur einmal übernommen und ein Hinweis erklärt, warum nicht automatisch |
 
 ## Randfälle
@@ -36,4 +37,5 @@ Zusammenhang richtig sein kann.
 |---|---|---|
 | 01.10.2026 | Autokorrektur nach 3 Übernahmen eindeutiger Tippfehler | User im Chat |
 | 16.11.2026 | Ein vollständiges, korrektes Wort („wird“) darf nie automatisch ersetzt werden | User im Chat |
+| 25.11.2026 | In WhatsApp und Slack erst in der Tipp-Pause ersetzen, weil das sofortige Ersetzen beim Weitertippen Wörter zerhackt hat | User im Chat |
 | 16.11.2026 | Echte Wörter erkennt die Windows-Rechtschreibprüfung (das Sprachpaket von WordCraft kennt gebeugte Formen nur über Regeln) | unabhängige Prüfung |
