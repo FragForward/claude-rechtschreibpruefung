@@ -275,13 +275,15 @@ function rspSaetzeImAbsatz(text, von, bis, erg) {
 }
 
 /** Zusammenhang für Claude: der ganze Absatz bis zur nächsten Leerzeile, mit Zeilenumbrüchen. */
+/**
+ * Umgebender Text eines Satzes: bis 1.500 Zeichen davor und 500 danach, über Leerzeilen hinweg, an Zeilengrenzen
+ * geschnitten, damit Anrede und Zusammenhang mitgehen (docs/spec/pruefung.md K1, K2).
+ */
 function rspKontext(text, s) {
-  let von = text.lastIndexOf('\n\n', s.start);
-  von = von < 0 ? 0 : von + 2;
-  let bis = text.indexOf('\n\n', s.ende);
-  if (bis < 0) bis = text.length;
-  if (s.start - von > 600) von = text.lastIndexOf('\n', s.start - 600) + 1;
-  if (bis - s.ende > 300) bis = s.ende + 300;
+  let von = Math.max(0, s.start - 1500);
+  if (von > 0) { const z = text.indexOf('\n', von); von = z >= 0 && z < s.start ? z + 1 : s.start; }
+  let bis = Math.min(text.length, s.ende + 500);
+  if (bis < text.length) { const z = text.lastIndexOf('\n', bis); bis = z >= s.ende ? z : s.ende; }
   return text.slice(von, bis).trim();
 }
 

@@ -74,10 +74,11 @@ Object.assign(RspPruefer.prototype, {
   /** Alle Vorschläge eines Satzes mit Haken; übernommen wird die Auswahl. */
   satzListe(d, anker) {
     const e = d.eintrag, offen = this.offeneFehler(d.satz, e);
-    const liste = offen.map(f => ({ typ: f.typ, alt: f.wort, optionen: [f.vorschlag, ...(f.alternativen || [])], erklaerung: f.erklaerung, fehler: f }));
-    if (e.satzVorschlag && !this.ignoriert.has(d.satz + '|satz')) {
-      liste.push({ typ: 'stil', text: 'Ganzen Satz umformulieren:', erklaerung: e.satzVorschlag, an: !offen.length, satz: true });
-    }
+    // Gibt es eine Fassung des ganzen Satzes, ist sie vorausgewählt: Einzelkorrekturen lassen oft Satzzeichen aus
+    // (docs/spec/pruefung.md K3).
+    const ganz = !!e.satzVorschlag && !this.ignoriert.has(d.satz + '|satz');
+    const liste = offen.map(f => ({ typ: f.typ, alt: f.wort, optionen: [f.vorschlag, ...(f.alternativen || [])], erklaerung: f.erklaerung, fehler: f, an: !ganz }));
+    if (ganz) liste.push({ typ: 'stil', text: 'Ganzen Satz umformulieren:', erklaerung: e.satzVorschlag, an: true, satz: true });
     this.popup.zeigen(anker, {
       typ: liste[0] ? liste[0].typ : 'stil',
       erklaerung: liste.length > 1 ? liste.length + ' Vorschläge in diesem Satz' : '',
